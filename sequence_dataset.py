@@ -40,13 +40,18 @@ class SequenceDataset(data.Dataset):
         Kinv = self.inv_intrinsics[i]
         return (tgt, refs), (tgt, refs, K, Kinv)
 
-def imshow(name, img):
-  cv2.imshow(name, np.transpose(img, (1, 2, 0))[:,:,::-1])
+def tensor_depthshow(name, depth):
+  d = depth.cpu().detach().numpy()
+  cv2.imshow(name, cv2.applyColorMap(np.uint8(d / d.max() * 255), cv2.COLORMAP_JET))
+
+def tensor_imshow(name, img):
+  im = img.cpu().detach().numpy()
+  cv2.imshow(name, np.transpose(im, (1, 2, 0))[:,:,::-1])
 
 if __name__ == '__main__':
   dataset = SequenceDataset("/home/ai/Data/kitti_formatted")
   for i in range(210, len(dataset)):
-    (tgt, refs, intrinsics, inv_intrinsics), _ = dataset[i]
+    (tgt, refs), _ = dataset[i]
     img = np.concatenate((refs[0], tgt, refs[1]), axis=1)
-    imshow("img", img)
+    tensor_imshow("img", img)
     cv2.waitKey(0)

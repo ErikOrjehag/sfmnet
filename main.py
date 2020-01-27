@@ -2,11 +2,13 @@ import torch
 import ignite
 from ignite.metrics import Accuracy
 import numpy as np
-from sequence_dataset import SequenceDataset
+from sequence_dataset import SequenceDataset, tensor_imshow
 import utils
 import argparse
 from sfm_loss import SfmLoss
 from sfm_net import SfmNet
+import cv2
+import time
 
 # Parse arguments
 parser = argparse.ArgumentParser(description='Train and eval sfm nets.')
@@ -19,13 +21,14 @@ print('\nCurrent arguments -> ', args, '\n')
 # Construct datasets
 dataset = SequenceDataset("/home/ai/Data/kitti_formatted")
 train_loader, val_loader, test_loader = utils.data_loaders(
-  dataset, 0.7, 0.1, 0.2, args.batch, args.workers)
+  dataset, 0.79, 0.01, 0.2, args.batch, args.workers)
 
 model = SfmNet()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.8)
+#optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.8)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0002, betas=(0.9, 0.999))
 criterion = SfmLoss()
 
-max_epochs = 10
+max_epochs = 3
 validate_every = 1000
 checkpoint_every = 1000
 
@@ -42,8 +45,16 @@ def validate(trainer):
     metrics = evaluator.state.metrics
     print("After {} iterations, loss = {:2f}"
       .format(trainer.state.iteration, metrics["loss"]))
+    _, data = iter(test_loader).next()
+    input = (data[0].to(args.device), None)
+    depths = model.depth_net(input)
+    tensor_imshow("img", input[0][0].cpu().detach().numpy())
+    d = depths[0][0].repeat(3,1,1).cpu().detach().numpy()
+    tensor_imshow("depth", d / d.max())
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
-checkpointer = ignite.handlers.ModelCheckpoint("./checkpoints", "my_model",
+checkpointer = ignite.handlers.ModelCheckpoint("./checkpoints", "my_model_2",
   save_interval=checkpoint_every, create_dir=True, require_empty=False)
 trainer.add_event_handler(ignite.engine.Events.ITERATION_COMPLETED, checkpointer, {"model": model})
 

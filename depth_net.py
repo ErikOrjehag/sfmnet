@@ -120,7 +120,7 @@ class DepthNet(nn.Module):
         out_iconv1 = self.iconv1(concat1)
         disp1 = self.alpha * self.predict_disp1(out_iconv1) + self.beta
 
-        if self.training:
-            return (disp1, disp2, disp3, disp4)
-        else:
-            return (disp1,)
+        disps = [disp1, disp2, disp3, disp4]
+        depths = [1/disp for disp in disps]
+
+        return depths
