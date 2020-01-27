@@ -8,8 +8,8 @@ from sequence_dataset import tensor_imshow, tensor_depthshow
 import cv2
 import inverse_warp
 
-disp, scale = IO.readPFM("/home/ai/Data/FlyingThings3D_subset/train/disparity/left/0000000.pfm")
-image = IO.readImage("/home/ai/Data/FlyingThings3D_subset/train/image_clean/left/0000000.png")
+disp, scale = IO.readPFM("/home/erik/Data/FlyingThings3D_subset/train/disparity/left/0000000.pfm")
+image = IO.readImage("/home/erik/Data/FlyingThings3D_subset/train/image_clean/left/0000000.png")
 disp = torch.from_numpy(np.ascontiguousarray(disp)).unsqueeze(0)
 image = torch.from_numpy(np.ascontiguousarray(image.transpose(2, 0, 1))).unsqueeze(0) / 255.0
 
@@ -31,9 +31,12 @@ print(depth.shape)
 
 warped, valid, pixels, rays, world = inverse_warp.inverse_warp(image, depth, pose, K)
 
-points = np.random.rand(10000, 3)
+colors = image[0,:].view(3,-1).transpose(1,0)
+print(colors.shape)
+points = world[0,:3].view(3,-1).transpose(1,0)
 point_cloud = o3d.geometry.PointCloud()
 point_cloud.points = o3d.utility.Vector3dVector(points)
+point_cloud.colors = o3d.utility.Vector3dVector(colors)
 o3d.visualization.draw_geometries([point_cloud])
 
 if False:
