@@ -46,9 +46,16 @@ def from_homog_coords(coords):
 def to_sampling_grid(coords):
     B, C, H, W = coords.shape
     # -1 extreme left, +1 extreme right
-    X = 2*coords[:, 0] / (W-1) - 1
-    Y = 2*coords[:, 1] / (H-1) - 1
-    return torch.stack((X, Y), dim=2).reshape(B, H, W, 2)
+    print("C", C)
+    flat = coords.reshape(B, C, -1) # [B,2,H*W]
+    print("flat", flat.shape)
+    X = 2*flat[:, 0] / (W-1) - 1
+    Y = 2*flat[:, 1] / (H-1) - 1
+    print("x shape", X.shape)
+    print("y shape", Y.shape)
+    p = torch.stack((X, Y), dim=2)
+    print("p", p.shape)
+    return p.reshape(B, H, W, 2)
 
 def pad_zero_column_right(K):
     return F.pad(input=K, pad=(0, 1), mode="constant", value=0)
@@ -72,6 +79,7 @@ def inverse_warp(img, depth, pose, K):
 
     # The world points projected back into the reference view
     KT = pad_zero_column_right(K) @ to_homog_matrix(T)
+    #print(KT)
     homog_projected_pixel_coords = multiply_coords(KT, homog_world_points)
 
     # Normalize homogeneous pixel coordinates
@@ -79,9 +87,10 @@ def inverse_warp(img, depth, pose, K):
 
     # Sample the source image in the projected pixel coordinates
     sampling_grid = to_sampling_grid(projected_pixel_coords)
-    reconstruction = F.grid_sample(img, sampling_grid, padding_mode="zeros", align_corners=True)
+
+    reconstruction = F.grid_sample(img, sampling_grid, padding_mode="zeros", align_corners=False)
 
     # Sampling points with abs value smaller than 1 are inside the frame
     valid_mask = sampling_grid.abs().max(dim=-1)[0] <=1
 
-    return reconstruction, valid_mask, homog_pixel_coords, rays, homog_world_points
+    return reconstruction , valid_mask, homog_pixel_coords, rays, homog_world_points, projected_pixel_coords, sampling_grid
