@@ -54,14 +54,13 @@ class PoseExpNet(nn.Module):
                 if m.bias is not None:
                     zeros_(m.bias)
 
-    def forward(self, x):
-        target_image, ref_imgs = x
-        B, C, H, W = target_image.shape
+    def forward(self, tgt, refs):
+        B, C, H, W = tgt.shape
 
-        assert(ref_imgs.size(1) == self.nb_ref_imgs)
+        assert(refs.size(1) == self.nb_ref_imgs)
 
         # Concatenate target and reference images along color channel        
-        input = torch.cat((target_image, ref_imgs.view(B, -1, H, W)), axis=1)
+        input = torch.cat((tgt, refs.view(B, -1, H, W)), axis=1)
 
         out_conv1 = self.conv1(input)
         out_conv2 = self.conv2(out_conv1)
@@ -92,7 +91,4 @@ class PoseExpNet(nn.Module):
             exp_mask2 = None
             exp_mask1 = None
 
-        if self.training:
-            return pose, [exp_mask1, exp_mask2, exp_mask3, exp_mask4]
-        else:
-            return pose, [exp_mask1]
+        return pose, [exp_mask1, exp_mask2, exp_mask3, exp_mask4]

@@ -5,11 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Inspect",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/debug.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "--load",
+                "checkpoints/model2_epoch_11.pt"
+            ]
+        },
+        {
+            "name": "Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "subProcess": true,
         }
     ]
 }

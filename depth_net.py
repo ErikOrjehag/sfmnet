@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.nn.init import xavier_uniform_, zeros_
 
 def add_conv_layers(module, name, conv_fn, args):
     for i in range(len(args)):
@@ -74,10 +75,16 @@ class DepthNet(nn.Module):
         self.predict_disp2 = predict_disp(upconv_planes[5])
         self.predict_disp1 = predict_disp(upconv_planes[6])
 
-    def forward(self, x):
-        x = x[0] # Target image
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+                xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    zeros_(m.bias)
 
-        out_conv1 = self.conv1(x)
+    def forward(self, tgt):
+
+        out_conv1 = self.conv1(tgt)
         out_conv2 = self.conv2(out_conv1)
         out_conv3 = self.conv3(out_conv2)
         out_conv4 = self.conv4(out_conv3)
@@ -114,8 +121,8 @@ class DepthNet(nn.Module):
         out_iconv2 = self.iconv2(concat2)
         disp2 = self.alpha * self.predict_disp2(out_iconv2) + self.beta
 
-        out_upconv1 = crop_like(self.upconv1(out_iconv2), x)
-        disp2_up = crop_like(F.interpolate(disp2, scale_factor=2, mode='bilinear', align_corners=False), x)
+        out_upconv1 = crop_like(self.upconv1(out_iconv2), tgt)
+        disp2_up = crop_like(F.interpolate(disp2, scale_factor=2, mode='bilinear', align_corners=False), tgt)
         concat1 = torch.cat((out_upconv1, disp2_up), 1)
         out_iconv1 = self.iconv1(concat1)
         disp1 = self.alpha * self.predict_disp1(out_iconv1) + self.beta

@@ -8,8 +8,11 @@ class SfmNet(nn.Module):
         super().__init__()
         self.depth_net = DepthNet()
         self.pose_net = PoseExpNet()
+        self.depth_net.init_weights()
+        self.pose_net.init_weights()
 
-    def forward(self, x):
-        depth_out = self.depth_net(x)
-        pose_out = self.pose_net(x)
+    def forward(self, inputs):
+        tgt, refs, K, Kinv = inputs
+        depth_out = self.depth_net(tgt)
+        pose_out = self.pose_net(tgt, refs)
         return depth_out, pose_out

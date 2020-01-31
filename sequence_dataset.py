@@ -33,25 +33,18 @@ class SequenceDataset(data.Dataset):
         tgt = 1 + index - self.cumlen[i]
         seq = self.images[i]
         paths = [seq[tgt], seq[tgt-1], seq[tgt+1]]
-        imgs = np.transpose([np.array(imread(path)).astype(np.float32)/255 for path in paths], (0, 3, 1, 2))
+        imgs = np.transpose([(np.array(imread(path)).astype(np.float32)/255)*2-1 for path in paths], (0, 3, 1, 2))
         tgt = imgs[0]
         refs = imgs[1:]
         K = self.intrinsics[i]
         Kinv = self.inv_intrinsics[i]
-        return (tgt, refs), (tgt, refs, K, Kinv)
-
-def tensor_depthshow(name, depth):
-  d = depth.cpu().detach().numpy()
-  cv2.imshow(name, cv2.applyColorMap(np.uint8(d / d.max() * 255), cv2.COLORMAP_JET))
-
-def tensor_imshow(name, img):
-  im = img.cpu().detach().numpy()
-  cv2.imshow(name, np.transpose(im, (1, 2, 0))[:,:,::-1])
+        #return (tgt, refs), (tgt, refs, K, Kinv)
+        return tgt, refs, K, Kinv
 
 if __name__ == '__main__':
   dataset = SequenceDataset("/home/ai/Data/kitti_formatted")
   for i in range(210, len(dataset)):
     (tgt, refs), _ = dataset[i]
     img = np.concatenate((refs[0], tgt, refs[1]), axis=1)
-    tensor_imshow("img", img)
-    cv2.waitKey(0)
+    #tensor_imshow("img", img)
+    #cv2.waitKey(0)
