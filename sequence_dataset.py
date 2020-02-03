@@ -6,19 +6,45 @@ import cv2
 import glob
 import os
 import sys
+import viz
+import torch
+
+def relative_transform(from_T, to_T):
+  R1, t1 = from_T[:3,:3], from_T[:3,3:]
+  R2, t2 = to_T[:3,:3], to_T[:3,3:]
+  rel_T = np.vstack((np.hstack((R2.T @ R1, R2.T @ (t1 - t2))), (0,0,0,1)))
+  return rel_T
 
 class SequenceDataset(data.Dataset):
   def __init__(self, root):
     super().__init__()
+
+    # Sequence folders
     self.sequences = sorted(glob.glob(os.path.join(root, "*", "")))
+    
+    # Camera intrinsics
     self.intrinsics = [
       np.genfromtxt(os.path.join(sequence, "cam.txt"), 
-        delimiter=",", dtype=np.float32).reshape((3, 3))
+        delimiter=" ", dtype=np.float32).reshape((3, 3))
       for sequence in self.sequences]
     self.inv_intrinsics = [np.linalg.inv(intrinsics) for intrinsics in self.intrinsics]
+    
+    # Poses
+    self.poses = []
+    for seq in self.sequences:
+      with open(os.path.join(seq, "poses.txt")) as f:
+        p = []
+        lines = f.readlines()
+        for line in lines:
+          p.append(np.fromstring(line, sep=" ", dtype=np.float32).reshape(3, 4))
+        self.poses.append(p)
+    
+    # Images
     self.images = [
       sorted(glob.glob(os.path.join(sequence, "*.jpg"))) 
       for sequence in self.sequences]
+    
+    # Length helpers
     self.lens = [len(images) - 2 for images in self.images]
     self.len = sum(self.lens)
     self.cumlen = np.hstack((0, np.cumsum(self.lens)))
@@ -36,15 +62,20 @@ class SequenceDataset(data.Dataset):
         imgs = np.transpose([(np.array(imread(path)).astype(np.float32)/255)*2-1 for path in paths], (0, 3, 1, 2))
         tgt = imgs[0]
         refs = imgs[1:]
+        sparse = np.load(paths[0][:-4] + ".npy").astype(np.float32)
+        dense = np.load(paths[0][:-4] + "_dense.npy").astype(np.float32)
         K = self.intrinsics[i]
         Kinv = self.inv_intrinsics[i]
-        #return (tgt, refs), (tgt, refs, K, Kinv)
-        return tgt, refs, K, Kinv
+        tgt_pose = self.poses[i][tgt]
+        ref_pose = [self.poses[i][tgt-1], self.poses[i][tgt+1]]
+        return [torch.tensor(thing) for thing in [tgt, refs, K, Kinv, sparse, dense, tgt_pose, ref_pose]]
 
 if __name__ == '__main__':
-  dataset = SequenceDataset("/home/ai/Data/kitti_formatted")
-  for i in range(210, len(dataset)):
-    (tgt, refs), _ = dataset[i]
-    img = np.concatenate((refs[0], tgt, refs[1]), axis=1)
-    #tensor_imshow("img", img)
-    #cv2.waitKey(0)
+  dataset = SequenceDataset(sys.argv[1])
+  for i in range(0, len(dataset)):
+    tgt, refs, K, Kinv, sparse, dense = dataset[i]
+    img = torch.cat((refs[0], tgt, refs[1]), dim=1)
+    cv2.imshow("img", viz.tensor2img(img))
+    cv2.imshow("sparse", viz.tensor2depthimg(sparse))
+    cv2.imshow("dense", viz.tensor2depthimg(dense))
+    cv2.waitKey(0)

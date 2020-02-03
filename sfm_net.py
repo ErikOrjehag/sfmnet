@@ -12,7 +12,7 @@ class SfmNet(nn.Module):
         self.pose_net.init_weights()
 
     def forward(self, inputs):
-        tgt, refs, K, Kinv = inputs
+        tgt, refs = inputs[:2]
         depth_out = self.depth_net(tgt)
         pose_out = self.pose_net(tgt, refs)
         return depth_out, pose_out

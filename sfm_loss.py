@@ -12,9 +12,8 @@ def photometric_reconstruction_loss(tgt, refs, K, depths, explains, poses):
         tgt_scaled = F.interpolate(tgt, (H, W), mode="area")
         refs_scaled = [F.interpolate(ref.squeeze(1), (H, W), mode="area") for ref in torch.split(refs, 1, dim=1)]
 
-        # Downscale t????
-        K_scaled = torch.cat((K[:,:2]/downscale, K[:,2:]/downscale), dim=1)
-
+        K_scaled = torch.cat((K[:,:2]/downscale, K[:,2:]), dim=1)
+        
         warps = []
         diffs = []
 
@@ -87,7 +86,7 @@ class SfmLoss():
         pass
 
     def __call__(self, inputs, outputs):
-        tgt, refs, K, Kinv = inputs
+        tgt, refs, K = inputs[:3]
         (depths), (poses, explains) = outputs
 
         #print(H, W)

@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Inspect",
             "type": "python",
@@ -15,6 +16,14 @@
                 "--load",
                 "checkpoints/model2_epoch_11.pt"
             ]
+        },
+        {
+            "name": "Train",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "subProcess": true
         },
         {
             "name": "Current File",

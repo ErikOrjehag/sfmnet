@@ -10,6 +10,8 @@ from sfm_net import SfmNet
 import cv2
 import time
 import random
+from pathlib import Path
+import os
 
 def is_interval(step, interval):
   return step % (interval+1) == interval
@@ -17,7 +19,7 @@ def is_interval(step, interval):
 def main():
   # Parse arguments
   parser = argparse.ArgumentParser(description="Train and eval sfm nets.")
-  parser.add_argument("--name", default="model", type=str, help="The run name.")
+  parser.add_argument("--name", default="", type=str, help="The run name.")
   parser.add_argument("--batch", default=4, type=int, help="The batch size.")
   parser.add_argument("--workers", default=4, type=int, help="The number of worker threads.")
   parser.add_argument("--device", default="cuda", type=str, help="The device to run on cpu/cuda.")
@@ -30,7 +32,10 @@ def main():
     print("CUDA is not available!")
     exit()
 
-  #torch.set_default_tensor_type(torch.cuda.FloatTensor)
+  # Setup checkpoint directory
+  checkpoint_dir = f"./checkpoints/{args.name}/"
+  if args.name != "":
+    Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
   # Tensorboard
   writer = SummaryWriter(log_dir=f"runs/{args.name}")
@@ -43,7 +48,8 @@ def main():
   model = SfmNet()
   
   # Optimizer and loss function
-  lr = 0.0002
+  #lr = 0.0002
+  lr = 0.00001
   optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
   criterion = SfmLoss()
 
@@ -101,13 +107,15 @@ def main():
         writer.add_scalar("loss", scalar_value=avg_loss, global_step=samples)
     
     # Checkpoint end of epoch
-    path = f"./checkpoints/{args.name}_epoch_{epoch+1}.pt"
-    print(f"Save checkpoint: {path}")
-    torch.save({
-      "epoch": epoch,
-      "model": model.state_dict(),
-      "optimizer": optimizer.state_dict()
-    }, path)
+    if args.name != "":
+      checkpoint_file = f"epoch_{epoch+1}.pt"
+      path = os.path.join(checkpoint_dir, checkpoint_file)
+      print(f"Save checkpoint: {path}")
+      torch.save({
+        "epoch": epoch,
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict()
+      }, path)
 
   writer.close()
 

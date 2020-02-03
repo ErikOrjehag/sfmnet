@@ -30,17 +30,3 @@ def get_kitti_split(batch, workers):
   train_loader, val_loader, test_loader = data_loaders(
     dataset, 0.799, 0.001, 0.2, batch, workers)
   return train_loader, val_loader, test_loader
-
-def tensor2depthimg(depth):
-  depth = depth.cpu().detach().numpy()
-  depth = np.uint8(depth / depth.max() * 255)
-  return cv2.applyColorMap(depth, cv2.COLORMAP_COOL)
-
-def tensor2img(img):
-  img = img.cpu().detach().numpy()
-  return np.uint8((np.transpose(img, (1, 2, 0))[:,:,::-1] + 1) / 2 * 255)
-
-
-def tensor2diffimg(img):
-  img = img.cpu().detach().numpy()
-  return np.uint8(np.transpose(img, (1, 2, 0))[:,:,::-1] * 255)

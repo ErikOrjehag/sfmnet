@@ -60,7 +60,7 @@ def main():
     # Send inputs to device
     inputs = [inp.to(args.device) for inp in inputs]
 
-    tgt, refs, K, Kinv = inputs
+    tgt, refs, K = inputs[:3]
 
     # Forward pass and loss
     with torch.no_grad():
