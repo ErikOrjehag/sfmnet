@@ -87,7 +87,7 @@ def inverse_warp(img, depth, pose, K):
     # Sample the source image in the projected pixel coordinates
     sampling_grid = to_sampling_grid(projected_pixel_coords)
 
-    reconstruction = F.grid_sample(img, sampling_grid, padding_mode="zeros", align_corners=False)
+    reconstruction = F.grid_sample(img, sampling_grid, padding_mode="zeros", align_corners=True)
 
     # Sampling points with abs value smaller than 1 are inside the frame
     valid_mask = sampling_grid.abs().max(dim=-1)[0] <=1

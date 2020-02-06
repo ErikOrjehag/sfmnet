@@ -30,6 +30,7 @@ class SequenceDataset(data.Dataset):
     self.inv_intrinsics = [np.linalg.inv(intrinsics) for intrinsics in self.intrinsics]
     
     # Poses
+    
     self.poses = []
     for seq in self.sequences:
       with open(os.path.join(seq, "poses.txt")) as f:
@@ -60,20 +61,23 @@ class SequenceDataset(data.Dataset):
         seq = self.images[i]
         paths = [seq[tgt], seq[tgt-1], seq[tgt+1]]
         imgs = np.transpose([(np.array(imread(path)).astype(np.float32)/255)*2-1 for path in paths], (0, 3, 1, 2))
-        tgt = imgs[0]
-        refs = imgs[1:]
+        tgt_img = imgs[0]
+        ref_imgs = imgs[1:]
         sparse = np.load(paths[0][:-4] + ".npy").astype(np.float32)
         dense = np.load(paths[0][:-4] + "_dense.npy").astype(np.float32)
         K = self.intrinsics[i]
         Kinv = self.inv_intrinsics[i]
         tgt_pose = self.poses[i][tgt]
         ref_pose = [self.poses[i][tgt-1], self.poses[i][tgt+1]]
-        return [torch.tensor(thing) for thing in [tgt, refs, K, Kinv, sparse, dense, tgt_pose, ref_pose]]
+        return [torch.tensor(thing) for thing in [tgt_img, ref_imgs, K, Kinv, sparse, dense, tgt_pose, ref_pose]]
 
 if __name__ == '__main__':
   dataset = SequenceDataset(sys.argv[1])
   for i in range(0, len(dataset)):
-    tgt, refs, K, Kinv, sparse, dense = dataset[i]
+    tgt, refs, K, Kinv, sparse, dense, tgt_pose, ref_pose = dataset[i][:8]
+    print(relative_transform(tgt_pose, ref_pose[0]))
+    print(relative_transform(tgt_pose, ref_pose[1]))
+    print("---")
     img = torch.cat((refs[0], tgt, refs[1]), dim=1)
     cv2.imshow("img", viz.tensor2img(img))
     cv2.imshow("sparse", viz.tensor2depthimg(sparse))

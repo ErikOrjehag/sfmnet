@@ -11,6 +11,7 @@ import cv2
 import time
 import random
 import inverse_warp
+import viz
 
 def restack(tensor, from_dim, to_dim):
   return torch.cat(torch.split(tensor, 1, dim=from_dim), dim=to_dim).squeeze(from_dim)
@@ -76,8 +77,8 @@ def main():
         print(list(pose[i,1,:].cpu().detach().numpy()))
         print("--")
 
-      depth_img = utils.tensor2depthimg(torch.cat((*depths[0][:,0],), dim=0))
-      tgt_img = utils.tensor2img(torch.cat((*tgt,), dim=1))      
+      depth_img = viz.tensor2depthimg(torch.cat((*depths[0][:,0],), dim=0))
+      tgt_img = viz.tensor2img(torch.cat((*tgt,), dim=1))      
       img = np.concatenate((tgt_img, depth_img), axis=1)
 
       warp_imgs = []
@@ -85,8 +86,8 @@ def main():
       for warp, diff in zip(warps, diffs):
         warp = restack(restack(warp, 1, -1), 0, -2)
         diff = restack(restack(diff, 1, -1), 0, -2)
-        warp_imgs.append(utils.tensor2img(warp))
-        diff_imgs.append(utils.tensor2diffimg(diff))
+        warp_imgs.append(viz.tensor2img(warp))
+        diff_imgs.append(viz.tensor2diffimg(diff))
 
       world = inverse_warp.depth_to_3d_points(depths[0], K)
       points = world[0,:].view(3,-1).transpose(1,0).cpu().detach().numpy().astype(np.float64)

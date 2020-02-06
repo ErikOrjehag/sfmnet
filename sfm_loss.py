@@ -104,6 +104,6 @@ class SfmLoss():
         ls = smooth_loss(depths)
         le = explainability_loss(explains)
 
-        loss = lr + 0.5 * ls + 0.2 * le
+        loss = lr + 0.1 * ls + 0.2 * le
 
         return loss, warps, diffs

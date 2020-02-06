@@ -26,7 +26,7 @@ def data_loaders(dataset, train, val, test, batch_size, workers):
   return train_loader, val_loader, test_loader
 
 def get_kitti_split(batch, workers):
-  dataset = SequenceDataset("../Data/kitti")
+  dataset = SequenceDataset("../Data/kitti2")
   train_loader, val_loader, test_loader = data_loaders(
-    dataset, 0.799, 0.001, 0.2, batch, workers)
+    dataset, 0.899, 0.001, 0.1, batch, workers)
   return train_loader, val_loader, test_loader

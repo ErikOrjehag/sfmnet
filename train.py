@@ -23,7 +23,7 @@ def main():
   parser.add_argument("--batch", default=4, type=int, help="The batch size.")
   parser.add_argument("--workers", default=4, type=int, help="The number of worker threads.")
   parser.add_argument("--device", default="cuda", type=str, help="The device to run on cpu/cuda.")
-  parser.add_argument("--epochs", default=24, type=int, help="Max number of epochs.")
+  parser.add_argument("--epochs", default=200, type=int, help="Max number of epochs.")
   parser.add_argument("--load", default="", type=str, help="Load state file.")
   args = parser.parse_args()
   print("\nCurrent arguments -> ", args, "\n")
@@ -38,7 +38,7 @@ def main():
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
   # Tensorboard
-  writer = SummaryWriter(log_dir=f"runs/{args.name}")
+  writer = SummaryWriter(log_dir=f"runs/{args.name}" if args.name != "" else None)
 
   # Construct datasets
   random.seed(1337)
@@ -48,8 +48,8 @@ def main():
   model = SfmNet()
   
   # Optimizer and loss function
-  #lr = 0.0002
-  lr = 0.00001
+  lr = 0.0002
+  #lr = 0.00001
   optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
   criterion = SfmLoss()
 

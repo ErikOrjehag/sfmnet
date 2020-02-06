@@ -26,6 +26,17 @@
             "subProcess": true
         },
         {
+            "name": "Gen",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/datasets/kitti/gen_excluded.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "~/Code/Data/kitti_raw"
+            ]
+        },
+        {
             "name": "Current File",
             "type": "python",
             "request": "launch",
