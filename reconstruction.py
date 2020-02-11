@@ -70,7 +70,7 @@ def depth_to_3d_points(depth, K):
 
     return world_points
 
-def inverse_warp(img, depth, pose, K):
+def reconstruct_image(img, depth, pose, K):
 
     T = pose_vec2mat(pose)
 
@@ -92,4 +92,9 @@ def inverse_warp(img, depth, pose, K):
     # Sampling points with abs value smaller than 1 are inside the frame
     valid_mask = sampling_grid.abs().max(dim=-1)[0] <=1
 
-    return reconstruction , valid_mask, homog_world_points, projected_pixel_coords, sampling_grid
+    debug = { 
+        "homog_world_points": homog_world_points, 
+        "projected_pixel_coords": projected_pixel_coords,
+        "sampling_grid": sampling_grid }
+
+    return reconstruction , valid_mask, debug

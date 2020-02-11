@@ -37,7 +37,7 @@ def crop_like(input, ref):
     assert(input.size(2) >= ref.size(2) and input.size(3) >= ref.size(3))
     return input[:, :, :ref.size(2), :ref.size(3)]
 
-class DepthNet(nn.Module):
+class SFMLearnerDepth(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -74,6 +74,8 @@ class DepthNet(nn.Module):
         self.predict_disp3 = predict_disp(upconv_planes[4])
         self.predict_disp2 = predict_disp(upconv_planes[5])
         self.predict_disp1 = predict_disp(upconv_planes[6])
+
+        self.init_weights()
 
     def init_weights(self):
         for m in self.modules():
@@ -130,4 +132,8 @@ class DepthNet(nn.Module):
         disps = [disp1, disp2, disp3, disp4]
         depths = [1/disp for disp in disps]
 
-        return depths
+        outputs = {
+            "depth": depths
+        }
+
+        return outputs

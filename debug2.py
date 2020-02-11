@@ -11,8 +11,10 @@ import cv2
 import time
 import random
 import inverse_warp
-import viz
 import options
+import mayavi.mlab as mlab
+import test_mayavi
+import viz
 
 def restack(tensor, from_dim, to_dim):
   return torch.cat(torch.split(tensor, 1, dim=from_dim), dim=to_dim).squeeze(from_dim)
@@ -47,10 +49,8 @@ def main():
   checkpoint = torch.load(args.load, map_location=torch.device(args.device))
   model.load_state_dict(checkpoint["model"])
   
-  vis = o3d.Visualizer()
-  vis.create_window()
-  point_cloud = o3d.geometry.PointCloud()
-  vis.add_geometry(point_cloud)
+  fig = mlab.figure(figure=None, bgcolor=(0,0,0),
+    fgcolor=None, engine=None, size=(1000, 500))
 
   # Test
   model.train()
@@ -87,10 +87,8 @@ def main():
     world = inverse_warp.depth_to_3d_points(data["depth"][0], data["K"])
     points = world[0,:].view(3,-1).transpose(1,0).cpu().detach().numpy().astype(np.float64)
     colors = (data["tgt"][0,:].view(3,-1).transpose(1,0).cpu().detach().numpy().astype(np.float64) + 1) / 2
-    
-    point_cloud.points = o3d.open3d.Vector3dVector(points)
-    point_cloud.colors = o3d.open3d.Vector3dVector(colors)
-    vis.add_geometry(point_cloud)
+
+    test_mayavi.draw_rgb_points(fig, points, colors)
 
     loop = True
     while loop:
@@ -99,13 +97,11 @@ def main():
         exit()
       elif key != -1:
         loop = False
-      vis.update_geometry()
-      vis.poll_events()
-      vis.update_renderer()
       cv2.imshow("target and depth", img)
       for i, (warp, diff) in enumerate(zip(warp_imgs, diff_imgs)):
         cv2.imshow("warp scale: %d" % i, warp)
         cv2.imshow("diff scale: %d" % i, diff)
+      mlab.show(10)
 
   utils.iterate_loader(args, test_loader, step_fn)
   

@@ -1,6 +1,5 @@
 import multiprocessing
 
-import open3d as o3d
 import torch
 import numpy as np
 import utils
@@ -11,8 +10,10 @@ import cv2
 import time
 import random
 import inverse_warp
-import viz
 import options
+import viz
+import OpenGL.GL as gl
+import pangolin as pango
 
 def restack(tensor, from_dim, to_dim):
   return torch.cat(torch.split(tensor, 1, dim=from_dim), dim=to_dim).squeeze(from_dim)
@@ -47,10 +48,24 @@ def main():
   checkpoint = torch.load(args.load, map_location=torch.device(args.device))
   model.load_state_dict(checkpoint["model"])
   
-  vis = o3d.Visualizer()
-  vis.create_window()
-  point_cloud = o3d.geometry.PointCloud()
-  vis.add_geometry(point_cloud)
+  # Window
+  pango.CreateWindowAndBind('Main', 640, 480)
+  gl.glEnable(gl.GL_DEPTH_TEST)
+
+  # Define Projection and initial ModelView matrix
+  scam = pango.OpenGlRenderState(
+    pango.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 200),
+    pango.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pango.AxisDirection.AxisY))
+  handler = pango.Handler3D(scam)
+
+  # Create Interactive View in window
+  dcam = pango.CreateDisplay()
+  dcam.SetBounds(
+    pango.Attach(0), 
+    pango.Attach(1), 
+    pango.Attach.Pix(180), 
+    pango.Attach(1), -640.0/480.0)
+  dcam.SetHandler(handler)
 
   # Test
   model.train()
@@ -87,25 +102,31 @@ def main():
     world = inverse_warp.depth_to_3d_points(data["depth"][0], data["K"])
     points = world[0,:].view(3,-1).transpose(1,0).cpu().detach().numpy().astype(np.float64)
     colors = (data["tgt"][0,:].view(3,-1).transpose(1,0).cpu().detach().numpy().astype(np.float64) + 1) / 2
-    
-    point_cloud.points = o3d.open3d.Vector3dVector(points)
-    point_cloud.colors = o3d.open3d.Vector3dVector(colors)
-    vis.add_geometry(point_cloud)
 
     loop = True
     while loop:
       key = cv2.waitKey(10)
-      if key == 27:
+      if key == 27 or pango.ShouldQuit():
         exit()
       elif key != -1:
         loop = False
-      vis.update_geometry()
-      vis.poll_events()
-      vis.update_renderer()
       cv2.imshow("target and depth", img)
       for i, (warp, diff) in enumerate(zip(warp_imgs, diff_imgs)):
         cv2.imshow("warp scale: %d" % i, warp)
         cv2.imshow("diff scale: %d" % i, diff)
+
+      gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+      gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+      dcam.Activate(scam)
+      gl.glPointSize(5)
+      pango.DrawPoints(points, colors)
+      pose = np.identity(4)
+      pose[:3, 3] = 0
+      gl.glLineWidth(1)
+      gl.glColor3f(0.0, 0.0, 1.0)
+      pango.DrawCamera(pose, 0.5, 0.75, 0.8)
+      pango.FinishFrame()
+      
 
   utils.iterate_loader(args, test_loader, step_fn)
   

@@ -5,32 +5,56 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import utils
 import argparse
-from sfm_loss import SfmLoss
-from sfm_net import SfmNet
+import sfm_loss
+import networks.architectures
 import cv2
 import time
 import random
 from pathlib import Path
 import os
+import options
 
 def is_interval(step, interval):
   return step % (interval+1) == interval
 
 def main():
   # Parse arguments
-  parser = argparse.ArgumentParser(description="Train and eval sfm nets.")
-  parser.add_argument("--name", default="", type=str, help="The run name.")
-  parser.add_argument("--batch", default=4, type=int, help="The batch size.")
-  parser.add_argument("--workers", default=4, type=int, help="The number of worker threads.")
-  parser.add_argument("--device", default="cuda", type=str, help="The device to run on cpu/cuda.")
-  parser.add_argument("--epochs", default=200, type=int, help="Max number of epochs.")
-  parser.add_argument("--load", default="", type=str, help="Load state file.")
-  args = parser.parse_args()
-  print("\nCurrent arguments -> ", args, "\n")
+  args = options.get_args(
+    description="Train a network",
+    options=[
+      "name", 
+      "net",
+      "batch", 
+      "workers", 
+      "device", 
+      "lr", 
+      "epochs", 
+      "load", 
+      "log-interval",
+      "loss"
+    ])
 
-  if args.device == "cuda" and not torch.cuda.is_available:
-    print("CUDA is not available!")
-    exit()
+  # Construct datasets
+  random.seed(1337)
+  train_loader, val_loader, _ = utils.get_kitti_split(args.batch, args.workers)
+
+  # The model architecture
+  model = networks.architectures.get_net(args)
+
+  # The loss
+  loss_fn = sfm_loss.get_loss_fn(args)
+
+  # Optimizer
+  optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999))
+
+  # Load
+  if args.load != "":
+    checkpoint = torch.load(args.load, map_location=torch.device(args.device))
+    model.load_state_dict(checkpoint["model"])
+    optimizer.load_state_dict(checkpoint["optimizer"])
+    epoch_start = checkpoint["epoch"]
+  else:
+    epoch_start = 0
 
   # Setup checkpoint directory
   checkpoint_dir = f"./checkpoints/{args.name}/"
@@ -38,32 +62,8 @@ def main():
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
   # Tensorboard
-  writer = SummaryWriter(log_dir=f"runs/{args.name}" if args.name != "" else None)
-
-  # Construct datasets
-  random.seed(1337)
-  train_loader, val_loader, _ = utils.get_kitti_split(args.batch, args.workers)
-
-  # The model
-  model = SfmNet()
-  
-  # Optimizer and loss function
-  lr = 0.0002
-  #lr = 0.00001
-  optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
-  criterion = SfmLoss()
-
-  # Intervals
-  LOG_INTERVAL = 200
-
-  # Load
-  if args.load != "":
-    checkpoint = torch.load(args.load)
-    model.load_state_dict(checkpoint["model"])
-    optimizer.load_state_dict(checkpoint["optimizer"])
-    epoch_start = checkpoint["epoch"]
-  else:
-    epoch_start = 0
+  if args.name != "":
+    writer = SummaryWriter(log_dir=f"runs/{args.name}")
 
   # Train
   model.train()
@@ -78,12 +78,11 @@ def main():
     for step, inputs in enumerate(train_loader):
 
       # Send inputs to device
-      inputs = [inp.to(args.device) for inp in inputs]
+      inputs = { k: v.to(args.device) for k, v in inputs.items() }
 
       # Forward pass and loss
       with torch.enable_grad():
-        outputs = model(inputs)
-        loss = criterion(inputs, outputs)[0]
+        loss, data = utils.forward_pass(model, loss_fn, inputs)
 
       # Backward pass
       optimizer.zero_grad()
@@ -93,9 +92,9 @@ def main():
       running_loss += loss.item()
 
       # Log information
-      if is_interval(step, LOG_INTERVAL):
+      if is_interval(step, args.log_interval):
         percent = 100 * step / N_steps
-        avg_loss = running_loss / LOG_INTERVAL
+        avg_loss = running_loss / args.log_interval
         running_loss = 0.0
         t_sample = (time.time() - epoch_ts) / step / args.batch
         t_sample_ms = 1000*t_sample
@@ -104,7 +103,8 @@ def main():
         print(f"Epoch {epoch+1}/{args.epochs} ({percent:3.0f}%, eta: {eta:4.0f}s) " +
           f"| {samples:5} samples | {t_sample_ms:.0f} ms/sample -> loss: {avg_loss:.3f}")
         
-        writer.add_scalar("loss", scalar_value=avg_loss, global_step=samples)
+        if args.name != "":
+          writer.add_scalar("loss", scalar_value=avg_loss, global_step=samples)
     
     # Checkpoint end of epoch
     if args.name != "":
@@ -117,7 +117,8 @@ def main():
         "optimizer": optimizer.state_dict()
       }, path)
 
-  writer.close()
+  if args.name != "":
+    writer.close()
 
 
 if __name__ == "__main__":

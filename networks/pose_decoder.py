@@ -35,6 +35,7 @@ class PoseDecoder(nn.Module):
   def forward(self, input_features):
     last_features = [f[-1] for f in input_features]
 
+    
     cat_features = [self.relu(self.convs["squeeze"](f)) for f in last_features]
     cat_features = torch.cat(cat_features, 1)
 
@@ -46,9 +47,8 @@ class PoseDecoder(nn.Module):
 
     out = out.mean(3).mean(2)
 
-    out = 0.01 * out.view(-1, self.num_frames_to_predict_for, 1, 6)
+    out = 0.01 * out.view(-1, self.num_frames_to_predict_for, 6)
 
-    axisangle = out[..., :3]
-    translation = out[..., 3:]
+    outputs = { "pose": out }
 
-    return axisangle, translation
+    return outputs

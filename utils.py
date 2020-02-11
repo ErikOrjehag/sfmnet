@@ -3,6 +3,26 @@ import numpy as np
 from sequence_dataset import SequenceDataset
 import cv2
 
+def iterate_loader(args, loader, fn):
+  for step, inputs in enumerate(loader):
+    inputs = { k: v.to(args.device) for k, v in inputs.items() }
+    fn(step, inputs)
+
+def forward_pass(model, loss_fn, inputs):
+  outputs = model(inputs)
+  data = { **inputs, **outputs }
+  loss, debug = loss_fn(data)
+  data = { **data, **debug }
+  return loss, data
+
+def normalize_map(map):
+  mean_map = map.mean(dim=2, keepdim=True).mean(dim=3, keepdim=True)
+  norm_map = map / (mean_map + 1e-7)
+  return norm_map
+
+def randn_like(tensor):
+  return torch.randn(tensor.shape).to(tensor.type)
+
 def split_dataset(dataset, train, val, test):
   assert sum([train, val, test]) == 1.0
   split = np.floor(len(dataset) * np.array([train, val, test]))

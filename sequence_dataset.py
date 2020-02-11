@@ -16,39 +16,41 @@ def relative_transform(from_T, to_T):
   return rel_T
 
 class SequenceDataset(data.Dataset):
-  def __init__(self, root):
+  def __init__(self, root, load_gt=False):
     super().__init__()
 
+    self.load_gt = load_gt
+
     # Sequence folders
-    self.sequences = sorted(glob.glob(os.path.join(root, "*", "")))
+    sequences = sorted(glob.glob(os.path.join(root, "*", "")))
     
     # Camera intrinsics
     self.intrinsics = [
       np.genfromtxt(os.path.join(sequence, "cam.txt"), 
         delimiter=" ", dtype=np.float32).reshape((3, 3))
-      for sequence in self.sequences]
+      for sequence in sequences]
     self.inv_intrinsics = [np.linalg.inv(intrinsics) for intrinsics in self.intrinsics]
-    
-    # Poses
-    
-    self.poses = []
-    for seq in self.sequences:
-      with open(os.path.join(seq, "poses.txt")) as f:
-        p = []
-        lines = f.readlines()
-        for line in lines:
-          p.append(np.fromstring(line, sep=" ", dtype=np.float32).reshape(3, 4))
-        self.poses.append(p)
     
     # Images
     self.images = [
       sorted(glob.glob(os.path.join(sequence, "*.jpg"))) 
-      for sequence in self.sequences]
+      for sequence in sequences]
     
     # Length helpers
     self.lens = [len(images) - 2 for images in self.images]
     self.len = sum(self.lens)
     self.cumlen = np.hstack((0, np.cumsum(self.lens)))
+
+    if self.load_gt:
+      # Poses
+      self.poses = []
+      for seq in sequences:
+        with open(os.path.join(seq, "poses.txt")) as f:
+          p = []
+          lines = f.readlines()
+          for line in lines:
+            p.append(np.fromstring(line, sep=" ", dtype=np.float32).reshape(3, 4))
+          self.poses.append(p)
 
   def __len__(self):
     return self.len
@@ -63,23 +65,37 @@ class SequenceDataset(data.Dataset):
         imgs = np.transpose([(np.array(imread(path)).astype(np.float32)/255)*2-1 for path in paths], (0, 3, 1, 2))
         tgt_img = imgs[0]
         ref_imgs = imgs[1:]
-        sparse = np.load(paths[0][:-4] + ".npy").astype(np.float32)
-        dense = np.load(paths[0][:-4] + "_dense.npy").astype(np.float32)
         K = self.intrinsics[i]
         Kinv = self.inv_intrinsics[i]
-        tgt_pose = self.poses[i][tgt]
-        ref_pose = [self.poses[i][tgt-1], self.poses[i][tgt+1]]
-        return [torch.tensor(thing) for thing in [tgt_img, ref_imgs, K, Kinv, sparse, dense, tgt_pose, ref_pose]]
+        data = {
+          "tgt": torch.tensor(tgt_img),
+          "refs": torch.tensor(ref_imgs),
+          "K": torch.tensor(K),
+        }
+        if self.load_gt:
+          sparse = np.load(paths[0][:-4] + ".npy").astype(np.float32)
+          dense = np.load(paths[0][:-4] + "_dense.npy").astype(np.float32)
+          tgt_pose = self.poses[i][tgt]
+          ref_pose = [self.poses[i][tgt-1], self.poses[i][tgt+1]]
+          data = {
+            **data,
+            "gt_sparse": torch.tensor(sparse),
+            "gt_dense": torch.tensor(dense),
+            "gt_pose": torch.tensor(0)
+          }
+        return data
 
 if __name__ == '__main__':
   dataset = SequenceDataset(sys.argv[1])
   for i in range(0, len(dataset)):
-    tgt, refs, K, Kinv, sparse, dense, tgt_pose, ref_pose = dataset[i][:8]
-    print(relative_transform(tgt_pose, ref_pose[0]))
-    print(relative_transform(tgt_pose, ref_pose[1]))
-    print("---")
-    img = torch.cat((refs[0], tgt, refs[1]), dim=1)
+    data = dataset[i]
+    #print(relative_transform(tgt_pose, ref_pose[0]))
+    #print(relative_transform(tgt_pose, ref_pose[1]))
+    #print("---")
+    img = torch.cat((data["refs"][0], data["tgt"], data["refs"][1]), dim=1)
     cv2.imshow("img", viz.tensor2img(img))
-    cv2.imshow("sparse", viz.tensor2depthimg(sparse))
-    cv2.imshow("dense", viz.tensor2depthimg(dense))
-    cv2.waitKey(0)
+    cv2.imshow("sparse", viz.tensor2depthimg(data["sparse"]))
+    cv2.imshow("dense", viz.tensor2depthimg(data["dense"]))
+    key = cv2.waitKey(0)
+    if key == 27:
+      break
