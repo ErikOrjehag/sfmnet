@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.nn.init import xavier_uniform_, zeros_
+import utils
 
 def add_conv_layers(module, name, conv_fn, args):
     for i in range(len(args)):
@@ -38,11 +39,12 @@ def crop_like(input, ref):
     return input[:, :, :ref.size(2), :ref.size(3)]
 
 class SFMLearnerDepth(nn.Module):
-    def __init__(self):
+
+    def __init__(self, min_depth, max_depth):
         super().__init__()
 
-        self.alpha = 10.0
-        self.beta = 0.01
+        self.min_depth = min_depth
+        self.max_depth = max_depth
 
         conv_planes = [32, 64, 128, 256, 512, 512, 512]
         self.conv1 = downsample_conv(3,              conv_planes[0], kernel_size=7)
@@ -109,30 +111,35 @@ class SFMLearnerDepth(nn.Module):
         out_upconv4 = crop_like(self.upconv4(out_iconv5), out_conv3)
         concat4 = torch.cat((out_upconv4, out_conv3), 1)
         out_iconv4 = self.iconv4(concat4)
-        disp4 = self.alpha * self.predict_disp4(out_iconv4) + self.beta
+        #disp4 = self.alpha * self.predict_disp4(out_iconv4) + self.beta
+        disp4, depth4 = utils.sigmoid_to_disp_depth(self.predict_disp4(out_iconv4), self.min_depth, self.max_depth)
 
         out_upconv3 = crop_like(self.upconv3(out_iconv4), out_conv2)
         disp4_up = crop_like(F.interpolate(disp4, scale_factor=2, mode='bilinear', align_corners=False), out_conv2)
         concat3 = torch.cat((out_upconv3, out_conv2, disp4_up), 1)
         out_iconv3 = self.iconv3(concat3)
-        disp3 = self.alpha * self.predict_disp3(out_iconv3) + self.beta
+        #disp3 = self.alpha * self.predict_disp3(out_iconv3) + self.beta
+        disp3, depth3 = utils.sigmoid_to_disp_depth(self.predict_disp3(out_iconv3), self.min_depth, self.max_depth)
 
         out_upconv2 = crop_like(self.upconv2(out_iconv3), out_conv1)
         disp3_up = crop_like(F.interpolate(disp3, scale_factor=2, mode='bilinear', align_corners=False), out_conv1)
         concat2 = torch.cat((out_upconv2, out_conv1, disp3_up), 1)
         out_iconv2 = self.iconv2(concat2)
-        disp2 = self.alpha * self.predict_disp2(out_iconv2) + self.beta
+        #disp2 = self.alpha * self.predict_disp2(out_iconv2) + self.beta
+        disp2, depth2 = utils.sigmoid_to_disp_depth(self.predict_disp2(out_iconv2), self.min_depth, self.max_depth)
 
         out_upconv1 = crop_like(self.upconv1(out_iconv2), tgt)
         disp2_up = crop_like(F.interpolate(disp2, scale_factor=2, mode='bilinear', align_corners=False), tgt)
         concat1 = torch.cat((out_upconv1, disp2_up), 1)
         out_iconv1 = self.iconv1(concat1)
-        disp1 = self.alpha * self.predict_disp1(out_iconv1) + self.beta
+        #disp1 = self.alpha * self.predict_disp1(out_iconv1) + self.beta
+        disp1, depth1 = utils.sigmoid_to_disp_depth(self.predict_disp1(out_iconv1), self.min_depth, self.max_depth)
 
         disps = [disp1, disp2, disp3, disp4]
-        depths = [1/disp for disp in disps]
+        depths = [depth1, depth2, depth3, depth4]
 
         outputs = {
+            "disp": disps,
             "depth": depths
         }
 

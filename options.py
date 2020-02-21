@@ -12,12 +12,17 @@ def get_args(description, options):
     parser.add_argument("--workers", default=4, type=int, help="The number of worker threads.")
   if "device" in options:
     parser.add_argument("--device", default="cuda", type=str, help="The device to run on cpu/cuda.")
-  if "lr" in options:
-    parser.add_argument("--lr", default=0.0002, type=float, help="Learning rate.")
-  if "epochs" in options:
-    parser.add_argument("--epochs", default=30, type=int, help="Max number of epochs.")
+  if "dataset" in options:
+    parser.add_argument("--dataset", default="kitti", type=str, choices=["kitti", "lyft"], help="Which dataset (kitti/lyft).")
+  
   if "load" in options:
     parser.add_argument("--load", default="", type=str, help="Load state file.")
+  
+  if "train" in options:
+    parser.add_argument("--lr", default=0.0002, type=float, help="Learning rate.")
+    parser.add_argument("--epochs", default=30, type=int, help="Max number of epochs.")
+    parser.add_argument("--log-interval", default=500, type=int, help="Number of samples before logging average running loss.")
+    parser.add_argument("--validate", default=False, action="store_true", help="Validate model against validation dataset every logging interval.")
   
   if "loss" in options:
     parser.add_argument("--smooth-weight", default=0.1, type=float, help="Smooth loss weight.")
@@ -32,9 +37,8 @@ def get_args(description, options):
   
   if "net" in options:
     parser.add_argument("--net", default="monodepth2", type=str, choices=["sfmlearner", "monodepth2"], help="The model architecture to use.")
-  
-  if "log-interval" in options:
-    parser.add_argument("--log-interval", default=500, type=int, help="Number of samples before logging average running loss.")
+    parser.add_argument("--min-depth", default=0.1, type=float, help="Minimum depth predicted.")
+    parser.add_argument("--max-depth", default=100, type=float, help="Maximum depth predicted.")
   
   args = parser.parse_args()
   print("\nCurrent arguments -> ", args, "\n")

@@ -21,9 +21,24 @@
             "name": "Train",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/train.py",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
-            "subProcess": true
+            "subProcess": true,
+            "args": [
+                "train",
+                "--workers",
+                "1",
+                "--net",
+                "sfmlearner",
+                //"monodepth2",
+                //"--ssim-weight",
+                //"0.15",
+                //"--smooth-map-normalization",
+                //"--edge-aware",
+                //"--upscale",
+                //"--stationary-mask",
+                //"--min-loss"
+            ]
         },
         {
             "name": "Gen",

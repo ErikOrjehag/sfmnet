@@ -1,52 +1,64 @@
 import torch
 import numpy as np
-from sequence_dataset import SequenceDataset
-import cv2
+import random
 
-def iterate_loader(args, loader, fn):
-  for step, inputs in enumerate(loader):
-    inputs = { k: v.to(args.device) for k, v in inputs.items() }
-    fn(step, inputs)
+def iterate_loader(device, loader, fn, start=0, end=None, args=[]):
+    for step, inputs in enumerate(loader, start=start):
+        if end is not None and step >= end:
+            break
+        inputs = dict_to_device(inputs, device)
+        fn(step, inputs, *args)
 
 def forward_pass(model, loss_fn, inputs):
-  outputs = model(inputs)
-  data = { **inputs, **outputs }
-  loss, debug = loss_fn(data)
-  data = { **data, **debug }
-  return loss, data
+    outputs = model(inputs)
+    data = { **inputs, **outputs }
+    loss, debug = loss_fn(data)
+    data = { **data, **debug }
+    return loss, data
+
+def backward_pass(optimizer, loss):
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+def dict_to_device(keyval, device):
+    return map_dict(keyval, lambda val: val.to(device))
+
+def dict_tensors_to_num(keyval):
+    return map_dict(keyval, lambda val: val.cpu().item())
+
+def map_dict(keyval, f):
+    return { key: f(val) for key, val in keyval.items() }
 
 def normalize_map(map):
-  mean_map = map.mean(dim=2, keepdim=True).mean(dim=3, keepdim=True)
-  norm_map = map / (mean_map + 1e-7)
-  return norm_map
+    mean_map = map.mean(dim=2, keepdim=True).mean(dim=3, keepdim=True)
+    norm_map = map / (mean_map + 1e-7)
+    return norm_map
 
 def randn_like(tensor):
-  return torch.randn(tensor.shape).to(tensor.type)
+    return torch.randn(tensor.shape, dtype=tensor.dtype, device=tensor.device)
 
-def split_dataset(dataset, train, val, test):
-  assert sum([train, val, test]) == 1.0
-  split = np.floor(len(dataset) * np.array([train, val, test]))
-  split = [int(s) for s in split]
-  split[0] += len(dataset) - sum(split)
-  return torch.utils.data.random_split(dataset, split)
+def sigmoid_to_disp_depth(sigmoid, min_depth, max_depth):
+    min_disp = 1 / max_depth
+    max_disp = 1 / min_depth
+    disp = min_disp + (max_disp - min_disp) * sigmoid
+    depth = 1 / disp
+    return disp, depth
 
-def data_loaders(dataset, train, val, test, batch_size, workers):
-  train_set, val_set, test_set = split_dataset(dataset, train, val, test)
-  print("Dataset: %d, Train: %d, Val: %d, Test: %d\n" % 
-    (len(dataset), len(train_set), len(val_set), len(test_set)))
-  train_loader = torch.utils.data.DataLoader(
-    train_set, batch_size=batch_size, shuffle=True,
-    num_workers=workers, pin_memory=True)
-  val_loader = torch.utils.data.DataLoader(
-    val_set, batch_size=batch_size, shuffle=False,
-    num_workers=workers, pin_memory=True)
-  test_loader = torch.utils.data.DataLoader(
-    test_set, batch_size=batch_size, shuffle=False,
-    num_workers=workers, pin_memory=True)
-  return train_loader, val_loader, test_loader
+def sec_to_hms(t):
+    t = int(t)
+    s = t % 60
+    t //= 60
+    m = t % 60
+    t //= 60
+    return "{:02d}h{:02d}m{:02d}s".format(t, m, s)
 
-def get_kitti_split(batch, workers):
-  dataset = SequenceDataset("../Data/kitti2")
-  train_loader, val_loader, test_loader = data_loaders(
-    dataset, 0.899, 0.001, 0.1, batch, workers)
-  return train_loader, val_loader, test_loader
+def sum_to_dict(target, source):
+    for key, val in source.items():
+        if key in target:
+            target[key] += val
+        else:
+            target[key] = val
+
+def is_interval(step, interval):
+  return step != 0 and step % interval == 0

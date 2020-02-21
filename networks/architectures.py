@@ -8,8 +8,14 @@ from networks.depth_decoder import DepthDecoder
 from networks.pose_decoder import PoseDecoder
 
 def get_net(args):
-  nets = { "sfmlearner": SFMLearner, "monodepth2": Monodepth2 }
-  return nets[args.net]()
+  if args.net == "sfmlearner":
+    net = SFMLearner(min_depth=args.min_depth, max_depth=args.max_depth, output_exp=(args.explain_weight != 0))
+  elif args.net == "monodepth2":
+    net = Monodepth2(min_depth=args.min_depth, max_depth=args.max_depth)
+  else:
+    print("No net called: %s" % args.net)
+    exit()
+  return net.to(args.device)
 
 def stack_tgt_refs(tgt, refs):
   # Stack tgt and refs along color channel
@@ -18,10 +24,10 @@ def stack_tgt_refs(tgt, refs):
 
 class SFMLearner(nn.Module):
 
-  def __init__(self):
+  def __init__(self, min_depth, max_depth, output_exp):
     super().__init__()
-    self.depth_net = SFMLearnerDepth()
-    self.pose_net = SFMLearnerPose()
+    self.depth_net = SFMLearnerDepth(min_depth, max_depth)
+    self.pose_net = SFMLearnerPose(output_exp)
 
   def forward(self, inputs):
     # Do something with inputs
@@ -31,7 +37,7 @@ class SFMLearner(nn.Module):
 
 class Monodepth2(nn.Module):
 
-  def __init__(self):
+  def __init__(self, min_depth, max_depth):
     super().__init__()
     self.depth_encoder = ResnetEncoder(
       num_layers=18, 
@@ -40,9 +46,8 @@ class Monodepth2(nn.Module):
 
     self.depth_decoder = DepthDecoder(
       num_ch_enc=self.depth_encoder.num_ch_enc, 
-      scales=range(4), 
-      num_output_channels=1, 
-      use_skips=True)
+      min_depth=min_depth,
+      max_depth=max_depth)
 
     self.pose_encoder = ResnetEncoder(
       num_layers=18, 

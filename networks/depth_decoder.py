@@ -13,16 +13,7 @@ import torch.nn.functional as F
 
 from collections import OrderedDict
 
-def disp_to_depth(disp, min_depth, max_depth):
-    """Convert network's sigmoid output into depth prediction
-    The formula for this conversion is given in the 'additional considerations'
-    section of the paper.
-    """
-    min_disp = 1 / max_depth
-    max_disp = 1 / min_depth
-    scaled_disp = min_disp + (max_disp - min_disp) * disp
-    depth = 1 / scaled_disp
-    return scaled_disp, depth
+import utils
 
 def upsample(x):
     """Upsample input tensor by a factor of 2
@@ -61,13 +52,16 @@ class Conv3x3(nn.Module):
         return out
 
 class DepthDecoder(nn.Module):
-    def __init__(self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
+    def __init__(self, num_ch_enc, min_depth, max_depth):
         super(DepthDecoder, self).__init__()
 
-        self.num_output_channels = num_output_channels
-        self.use_skips = use_skips
+        self.min_depth = min_depth
+        self.max_depth = max_depth
+
+        self.num_output_channels = 1
+        self.use_skips = True
         self.upsample_mode = 'nearest'
-        self.scales = scales
+        self.scales = range(4)
 
         self.num_ch_enc = num_ch_enc
         self.num_ch_dec = np.array([16, 32, 64, 128, 256])
@@ -95,7 +89,7 @@ class DepthDecoder(nn.Module):
 
     def forward(self, input_features):
         
-        disps = [None] * 4
+        sigmoids = [None] * 4
 
         # decoder
         x = input_features[-1]
@@ -107,8 +101,13 @@ class DepthDecoder(nn.Module):
             x = torch.cat(x, 1)
             x = self.convs[("upconv", i, 1)](x)
             if i in self.scales:
-                disps[i] = self.sigmoid(self.convs[("dispconv", i)](x))
+                sigmoids[i] = self.sigmoid(self.convs[("dispconv", i)](x))
 
-        depths = [disp_to_depth(disp, min_depth=0.1, max_depth=100)[1] for disp in disps]
+        disps = []
+        depths = []
+        for sigmoid in sigmoids:
+            disp, depth = utils.sigmoid_to_disp_depth(sigmoid, min_depth=self.min_depth, max_depth=self.max_depth)
+            disps.append(disp)
+            depths.append(depth)
 
-        return { "depth": depths }
+        return { "disp": disps, "depth": depths }

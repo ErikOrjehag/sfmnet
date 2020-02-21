@@ -64,9 +64,9 @@ class SfmLoss():
         # Smooth loss
         smooth_map = data[self.which_smooth_map]
         if self.use_normalization:
-            smooth_map = utils.normalize_map(smooth_map)
+            smooth_map = [utils.normalize_map(m) for m in smooth_map]
         if self.use_edge_aware:
-            smooth_loss = edge_aware_smooth_loss(smooth_map)
+            smooth_loss = edge_aware_smooth_loss(smooth_map, data["tgt"])
         else:
             smooth_loss = second_order_smooth_loss(smooth_map)
         total_loss += self.weights["smooth"] * smooth_loss
@@ -85,18 +85,19 @@ def photometric_reconstruction_loss(
     use_stationary_mask, 
     use_min):
     
-    depth = data["depth"]
-    exp_mask = data["exp_mask"] if "exp_mask" in data else [None] * len(depth)
-    assert len(depth) == len(exp_mask)
+    depths = data["depth"]
+    exp_masks = data["exp_mask"] if "exp_mask" in data else [None] * len(depths)
+    assert len(depths) == len(exp_masks)
 
     total_loss = 0.0
     total_debug = {}
 
     # For every scale in the pyramid
-    for depth, exp_mask in zip(depth, exp_mask):
+    for depth, exp_mask in zip(depths, exp_masks):
         tgt = data["tgt"]
         refs = data["refs"]
         K = data["K"]
+        pose = data["pose"]
         if use_upscale:
             # Upscale depth map to input image size
             H, W = tgt.shape[2:]
@@ -108,15 +109,16 @@ def photometric_reconstruction_loss(
             H, W = depth.shape[2:]
             ratio = tgt.shape[2] / H
             tgt = F.interpolate(tgt, (H, W), mode="area")
-            refs = F.interpolate(refs, (H, W), mode="area")
-            K = torch.cat((K[:,:2] / downscale, K[:,2:]), dim=1)
+            refs = F.interpolate(refs, (refs.shape[2], H, W), mode="area")
+            K = torch.cat((K[:,:2] / ratio, K[:,2:]), dim=1)
         # Calculate the photometric reconstruction loss for a single scale
         loss, debug = one_scale_photometric_loss(
+            poses=pose,
             depth=depth, 
             tgt=tgt, 
             refs=refs, 
             K=K, 
-            exp_map=exp_mask, 
+            exp_mask=exp_mask, 
             ssim_weight=ssim_weight, 
             use_stationary_mask=use_stationary_mask, 
             use_min=use_min)
@@ -130,6 +132,7 @@ def photometric_reconstruction_loss(
     return total_loss, total_debug
 
 def one_scale_photometric_loss(
+    poses,
     depth, 
     tgt, 
     refs, 
@@ -146,7 +149,8 @@ def one_scale_photometric_loss(
     stationary_similarities = []
 
     for i, ref in enumerate(refs.split(split_size=1, dim=1)):
-        pose = data["pose"][:,i]
+        ref = ref.squeeze(1)
+        pose = poses[:,i]
 
         ref_warped, inside_mask = reconstruct_image(ref, depth, pose, K)[:2]
         reconstruction_similarity = photometric_similarity_map(tgt, ref_warped, ssim_weight)
@@ -157,24 +161,35 @@ def one_scale_photometric_loss(
         if exp_mask is not None:
             reconstruction_similarity *= exp_mask[:,i].unsqueeze(1)
 
+        reconstruction_similarities.append(reconstruction_similarity)
+
         if use_stationary_mask:
             stationary_similarity = photometric_similarity_map(tgt, ref, ssim_weight)
             stationary_similarity += utils.randn_like(stationary_similarity) * 1e-5 # break ties (not needed when using not_stationary_mask???)
-    
+            stationary_similarities.append(stationary_similarity)
+
     reconstruction_similarities = torch.cat(reconstruction_similarities, dim=1)
-    stationary_similarities = torch.cat(stationary_similarities, dim=1)
 
     if not use_min:
         reconstruction_similarities = reconstruction_similarities.mean(dim=1, keepdim=True)
-
-    combined = torch.cat((stationary_similarities, reconstruction_similarities), dim=1)
+    
+    if use_stationary_mask:
+        stationary_similarities = torch.cat(stationary_similarities, dim=1)
+        combined = torch.cat((stationary_similarities, reconstruction_similarities), dim=1)
+    else:
+        combined = reconstruction_similarities
 
     min_similarities, min_idx = torch.min(combined, dim=1)
-    not_stationary_mask = (min_idx > stationary_similarities.shape[1] - 1).float()
+    n_stationary_similarities = stationary_similarities.shape[1] if use_stationary_mask else 0
+    not_stationary_mask = (min_idx > n_stationary_similarities - 1)
 
-    total_loss = min_similarities[not_stationary_mask].mean()
+    diff = min_similarities * not_stationary_mask
 
-    return total_loss, { "warp": warps, "diff": to_optimize, "min_idx": min_idx }
+    total_loss = diff.mean()
+
+    warps = torch.stack(warps, dim=1)
+
+    return total_loss, { "warp": warps, "diff": diff, "min_idx": min_idx }
 
 
 def photometric_similarity_map(img1, img2, ssim_weight):
@@ -222,16 +237,19 @@ def second_order_smooth_loss(depths):
         weight /= 2.3
     return loss
 
-def edge_aware_smooth_loss(disps, img):
+def edge_aware_smooth_loss(depths, tgt):
     loss = 0.0
-    for scale, disp in enumerate(disps):
-        grad_disp_x = torch.abs(disp[:, :, :, :-1] - disp[:, :, :, 1:])
-        grad_disp_y = torch.abs(disp[:, :, :-1, :] - disp[:, :, 1:, :])
+    for scale, depth in enumerate(depths):
+        H, W = depth.shape[2:]
+        ratio = tgt.shape[2] / H
+        img = F.interpolate(tgt, (H, W), mode="area")
+        grad_depth_x = torch.abs(depth[:, :, :, :-1] - depth[:, :, :, 1:])
+        grad_depth_y = torch.abs(depth[:, :, :-1, :] - depth[:, :, 1:, :])
         grad_img_x = torch.mean(torch.abs(img[:, :, :, :-1] - img[:, :, :, 1:]), 1, keepdim=True)
         grad_img_y = torch.mean(torch.abs(img[:, :, :-1, :] - img[:, :, 1:, :]), 1, keepdim=True)
-        grad_disp_x *= torch.exp(-grad_img_x)
-        grad_disp_y *= torch.exp(-grad_img_y)
-        loss += (grad_disp_x.mean() + grad_disp_y.mean()) / (2 ** scale)
+        grad_depth_x *= torch.exp(-grad_img_x*10)
+        grad_depth_y *= torch.exp(-grad_img_y*10)
+        loss += (grad_depth_x.mean() + grad_depth_y.mean()) / (2 ** scale)
     return loss
 
 def explainability_regularization_loss(masks):

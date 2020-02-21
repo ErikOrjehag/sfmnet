@@ -18,10 +18,11 @@ def upconv(in_planes, out_planes):
 
 class SFMLearnerPose(nn.Module):
 
-  def __init__(self):
+  def __init__(self, output_exp):
     super(SFMLearnerPose, self).__init__()
+    
     self.nb_ref_imgs = 2
-    self.output_exp = True
+    self.output_exp = output_exp
 
     conv_planes = [16, 32, 64, 128, 256, 256, 256]
     self.conv1 = conv(3*(1+self.nb_ref_imgs), conv_planes[0], kernel_size=7)
