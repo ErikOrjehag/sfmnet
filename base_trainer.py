@@ -1,23 +1,16 @@
-import multiprocessing
+
+import os
+import time
+from pathlib import Path
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
-import numpy as np
+
 import utils
-import data
-import argparse
-import sfm_loss
-import networks.architectures
-import cv2
-import time
-from pathlib import Path
-import os
-import options
-import evaluation
 
-class Trainer():
+class BaseTrainer():
 
-    def __init__(self, args):
+    def __init__(self, args, loaders, model, loss_fn):
         super().__init__()
         
         self.BATCH = args.batch
@@ -26,14 +19,14 @@ class Trainer():
         self.LOG_INTERVAL = args.log_interval
         self.SHOULD_VALIDATE = args.validate
 
-        # Construct datasets
-        self.loaders = data.get_batch_loader_split(args)
-        
-        # The model architecture
-        self.model = networks.architectures.get_net(args)
+        # Train, Val, Test loaders
+        self.loaders = loaders
 
-        # The loss
-        self.loss_fn = sfm_loss.get_loss_fn(args)
+        # The model to train
+        self.model = model
+
+        # The loss function
+        self.loss_fn = loss_fn
 
         # Optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr, betas=(0.9, 0.999))
@@ -68,7 +61,7 @@ class Trainer():
             self.epoch_ts = time.time()
             self.running_loss = 0.0
 
-            utils.iterate_loader(self.DEVICE, self.loaders["train"], self._train_step_fn)
+            utils.iterate_loader(self.DEVICE, self.loaders["train"], self.__train_step_fn)
 
             if self.SHOULD_CHECKPOINT:
                 checkpoint_file = f"epoch_{epoch+1}.pt"
@@ -83,7 +76,7 @@ class Trainer():
         if self.SHOULD_WRITE:
             self.writer.close()
 
-    def _train_step_fn(self, step, inputs):
+    def __train_step_fn(self, step, inputs):
 
         # Forward pass and loss
         with torch.enable_grad():
@@ -99,7 +92,7 @@ class Trainer():
         if utils.is_interval(step, self.LOG_INTERVAL):
 
             if self.SHOULD_VALIDATE:
-                val_metrics, train_metrics = self._validate()
+                val_metrics, train_metrics = self.__validate()
 
             N_steps = len(self.loaders["train"])
             percent = 100 * step / N_steps
@@ -119,24 +112,25 @@ class Trainer():
                         if key == "abs_rel":
                             self.writer.add_scalar(f"val/{key}", scalar_value=val_metrics[key], global_step=samples)
                             self.writer.add_scalar(f"train/{key}", scalar_value=train_metrics[key], global_step=samples)
-    
-    def _validate(self):
+
+    def __validate(self):
         N = len(self.loaders["val"])
         val_metrics = {}
         train_metrics = {}
         
-        utils.iterate_loader(self.DEVICE, self.loaders["val"], self._val_step_fn, args=(val_metrics,))
-        utils.iterate_loader(self.DEVICE, self.loaders["train"], self._val_step_fn, args=(train_metrics,), end=N)
+        utils.iterate_loader(self.DEVICE, self.loaders["val"], self.__val_step_fn, args=(val_metrics,))
+        utils.iterate_loader(self.DEVICE, self.loaders["train"], self.__val_step_fn, args=(train_metrics,), end=N)
 
         val_metrics = utils.map_dict(val_metrics, lambda v: v/N)
         train_metrics = utils.map_dict(train_metrics, lambda v: v/N)
 
         return val_metrics, train_metrics
-        
-    def _val_step_fn(self, step, inputs, metrics_sum):
+
+    def __val_step_fn(self, step, inputs, metrics_sum):
         with torch.no_grad():
             loss, data = utils.forward_pass(self.model, self.loss_fn, inputs)
-        gt_depth = data["gt_sparse"]
-        pred_depth = data["depth"][0]
-        metrics = evaluation.eval_depth(gt_depth, pred_depth)
+        metrics = self.calc_metrics(data)
         utils.sum_to_dict(metrics_sum, metrics)
+
+    def calc_metrics(self, data):
+        return {}

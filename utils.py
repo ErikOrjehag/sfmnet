@@ -62,3 +62,10 @@ def sum_to_dict(target, source):
 
 def is_interval(step, interval):
   return step != 0 and step % interval == 0
+
+def normalize_image(img):
+    #x = (input_image - 0.45) / 0.225
+    return img * 2 - 1
+
+def cv2_to_torch(img):
+    return np.transpose(np.array(img).astype(np.float32) / 255, axes=(2, 0, 1))

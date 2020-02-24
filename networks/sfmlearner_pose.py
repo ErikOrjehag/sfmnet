@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch import sigmoid
 from torch.nn.init import xavier_uniform_, zeros_
+import utils
 
 def conv(in_planes, out_planes, kernel_size=3):
   return nn.Sequential(
@@ -58,6 +59,8 @@ class SFMLearnerPose(nn.Module):
           zeros_(m.bias)
 
   def forward(self, inputs):
+
+    inputs = utils.normalize_image(inputs)
 
     assert(inputs.shape[1] == (self.nb_ref_imgs+1) * 3)
 

@@ -8,6 +8,7 @@ import sys
 import viz
 import torch
 from imageio import imread
+import utils
 
 def relative_transform(from_T, to_T):
   R1, t1 = from_T[:3,:3], from_T[:3,3:]
@@ -54,14 +55,24 @@ class SequenceDataset(data.Dataset):
     crop = int((H * scale - imH) / 2)
     return crop, scale
 
-  def _load_image_from_disk(self, path):
+  def _load_image_from_disk(self, path, K):
     img = imread(path)
     H, W = img.shape[:2]
+    #print(img.shape)
     crop, scale = self.calc_crop(H, W)
+    #print(crop, scale)
+    #print(K)
     if scale != 1:
       img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+      #print(img.shape)
       img = img[crop:crop+self.imHW[0]]
-    return np.transpose(np.array(img).astype(np.float32) / 255, axes=(2, 0, 1))
+      #print(img.shape)
+      K[:2,:] *= scale
+      #print(K)
+      K[1,2] -= crop
+      #print(K)
+    img = utils.cv2_to_torch(img)
+    return img, K
 
   def __len__(self):
     return self.len

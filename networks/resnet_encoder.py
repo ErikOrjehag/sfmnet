@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torch.utils.model_zoo as model_zoo
-
+import utils
 
 class ResNetMultiImageInput(models.ResNet):
   """Constructs a resnet model with varying number of input images.
@@ -85,7 +85,7 @@ class ResnetEncoder(nn.Module):
 
   def forward(self, input_image):
     self.features = []
-    x = (input_image - 0.45) / 0.225
+    x = utils.normalize_image(input_image)
     x = self.encoder.conv1(x)
     x = self.encoder.bn1(x)
     self.features.append(self.encoder.relu(x))

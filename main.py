@@ -14,12 +14,13 @@ from pathlib import Path
 import os
 import options
 import sys
-from trainer import Trainer
-from debugger import Debugger
+from trainer import SfMTrainer
+from debugger import Debugger as SfMDebugger
+from point_trainer import PointTrainer
 import tester
 
 def parse_args(extra=[]):
-    always = ["net", "workers", "device", "load", "loss", "dataset"]
+    always = ["net", "workers", "device", "load"]
     return options.get_args(
         description="Train, debug or test a network",
         options=always + extra)
@@ -29,11 +30,13 @@ def main():
     choice = sys.argv.pop(1)
 
     if choice == "train":
-        action = Trainer(parse_args(["name", "batch", "train"]))
+        action = SfMTrainer(parse_args(["name", "batch", "train", "loss", "dataset"]))
     elif choice == "debugger":
-        action = Debugger(parse_args())
+        action = SfMDebugger(parse_args(["loss", "dataset"]))
+    elif choice == "point":
+        action = PointTrainer(parse_args())
     else:
-        print("No action to perform: (choose train/debug/test)")
+        print("No such action to perform: %s" % choice)
         exit()
 
     action.run()

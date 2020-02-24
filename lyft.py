@@ -43,7 +43,7 @@ class Lyft(SequenceDataset):
         T = Quaternion(pose_record["rotation"]).transformation_matrix
         T[:3,3] = np.array(pose_record["translation"])
 
-        img = self._load_image_from_disk(self.data.get_sample_data_path(sample))
+        img, K = self._load_image_from_disk(self.data.get_sample_data_path(sample), K)
 
         return img, T, K
         

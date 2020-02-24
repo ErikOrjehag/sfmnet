@@ -29,9 +29,9 @@ class Kitti(SequenceDataset):
         return sorted(glob.glob(os.path.join(sequence, "*.jpg")))
 
     def _load_sample(self, seq_i, sample):
-        img = self._load_image_from_disk(sample)
         K = self.intrinsics[seq_i]
         T = self.poses[seq_i]
+        img, K = self._load_image_from_disk(sample, K)
         return img, T, K
 
     def _load_depth(self, sample):

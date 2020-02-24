@@ -22,6 +22,9 @@ def stack_tgt_refs(tgt, refs):
   B, _, H, W = tgt.shape
   return torch.cat( ( tgt, refs.view(B, -1, H, W) ), axis=1)
 
+def normalize_image(img):
+  return img * 2 - 1
+
 class SFMLearner(nn.Module):
 
   def __init__(self, min_depth, max_depth, output_exp):

@@ -23,7 +23,7 @@ class Debugger():
 
         self.DEVICE = args.device
 
-        self.loader = data.get_kitti(args.workers)
+        self.loader = data.get_loader(args)
 
         self.model = networks.architectures.get_net(args)
 

@@ -52,6 +52,14 @@
             ]
         },
         {
+            "name": "Unsuperpoint",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/networks/unsuperpoint.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+        },
+        {
             "name": "Current File",
             "type": "python",
             "request": "launch",

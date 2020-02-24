@@ -4,28 +4,45 @@ import cv2
 import torch
 from kitti import Kitti
 from lyft import Lyft
+from simple_dataset import SimpleDataset
 import viz
+
+def sfm_inspector(data):
+    img = torch.cat((data["refs"][0], data["tgt"], data["refs"][1]), dim=1)
+    cv2.imshow("img", viz.tensor2img(img))
+    cv2.imshow("gt_sparse", viz.tensor2depthimg(data["gt_sparse"]))
+
+def simple_inspector(data):
+    img = data["img"]
+    cv2.imshow("img", viz.tensor2img(img))
 
 def main():
 
-    if sys.argv[1] == "kitti":
-        dataset = Kitti(sys.argv[2])
-    elif sys.argv[1] == "lyft":
-        dataset = Lyft(sys.argv[2])
+    choise = sys.argv[1]
+    path = sys.argv[2]
 
-    for i in range(0, len(dataset)):
+    print(choise, path)
 
-        data = dataset[i]
+    if choise == "kitti":
+        dataset = Kitti(path)
+        inspector = sfm_inspector
+    elif choise == "lyft":
+        dataset = Lyft(path)
+        inspector = sfm_inspector
+    elif choise == "simple":
+        dataset = SimpleDataset(path)
+        inspector = simple_inspector
+    else:
+        print("No such choise: %s" % choise)
+        exit()
 
-        #print(relative_transform(tgt_pose, ref_pose[0]))
-        #print(relative_transform(tgt_pose, ref_pose[1]))
-        #print("---")+
+    print(len(dataset))
 
-        img = torch.cat((data["refs"][0], data["tgt"], data["refs"][1]), dim=1)
+    for i, data in enumerate(dataset, start=0):
 
-        
-        cv2.imshow("img", viz.tensor2img(img))
-        cv2.imshow("gt_sparse", viz.tensor2depthimg(data["gt_sparse"]))
+        print(i)
+
+        inspector(data)
         
         key = cv2.waitKey(0)
         if key == 27:

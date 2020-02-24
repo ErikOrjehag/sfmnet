@@ -88,6 +88,8 @@ class SFMLearnerDepth(nn.Module):
 
     def forward(self, tgt):
 
+        tgt = utils.normalize_image(tgt)
+
         out_conv1 = self.conv1(tgt)
         out_conv2 = self.conv2(out_conv1)
         out_conv3 = self.conv3(out_conv2)
