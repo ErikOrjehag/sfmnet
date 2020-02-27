@@ -4,10 +4,10 @@ import numpy as np
 import torch
 from kitti import Kitti
 from lyft import Lyft
-from simple_dataset import SimpleDataset
+from homo_adap_dataset import HomoAdapDataset
 
-kitti_path = "../Data/kitti2"
-coco_path = "../Data/coco"
+kitti_path = "/home/ai/Code/Data/kitti2"
+coco_path = "/home/ai/Code/Data/coco/unlabeled2017/"
 lyft_path = "/home/ai/Code/Data/lyft/v1.02-train/"
 
 def _split_dataset(dataset, train, val, test):
@@ -68,4 +68,4 @@ def get_loader(args):
         exit()
 
 def get_coco_batch_loader_split(args):
-    return _get_batch_loader_split(SimpleDataset, coco_path, args.workers)
+    return _get_batch_loader_split(HomoAdapDataset, coco_path, args.batch, args.workers)

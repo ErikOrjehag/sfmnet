@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 import options
 import sys
-from trainer import SfMTrainer
+from sfm_trainer import SfMTrainer
 from debugger import Debugger as SfMDebugger
 from point_trainer import PointTrainer
 import tester
@@ -29,12 +29,12 @@ def main():
 
     choice = sys.argv.pop(1)
 
-    if choice == "train":
+    if choice == "sfm-train":
         action = SfMTrainer(parse_args(["name", "batch", "train", "loss", "dataset"]))
-    elif choice == "debugger":
+    elif choice == "sfm-debug":
         action = SfMDebugger(parse_args(["loss", "dataset"]))
-    elif choice == "point":
-        action = PointTrainer(parse_args())
+    elif choice == "point-train":
+        action = PointTrainer(parse_args(["name", "batch", "train"]))
     else:
         print("No such action to perform: %s" % choice)
         exit()

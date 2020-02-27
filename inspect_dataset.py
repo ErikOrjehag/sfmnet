@@ -4,7 +4,7 @@ import cv2
 import torch
 from kitti import Kitti
 from lyft import Lyft
-from simple_dataset import SimpleDataset
+from homo_adap_dataset import HomoAdapDataset
 import viz
 
 def sfm_inspector(data):
@@ -14,7 +14,11 @@ def sfm_inspector(data):
 
 def simple_inspector(data):
     img = data["img"]
+    warp = data["warp"]
+    homography = data["homography"]
+    print(homography)
     cv2.imshow("img", viz.tensor2img(img))
+    cv2.imshow("warp", viz.tensor2img(warp))
 
 def main():
 
@@ -29,8 +33,8 @@ def main():
     elif choise == "lyft":
         dataset = Lyft(path)
         inspector = sfm_inspector
-    elif choise == "simple":
-        dataset = SimpleDataset(path)
+    elif choise == "homo":
+        dataset = HomoAdapDataset(path)
         inspector = simple_inspector
     else:
         print("No such choise: %s" % choise)

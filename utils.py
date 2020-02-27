@@ -68,4 +68,4 @@ def normalize_image(img):
     return img * 2 - 1
 
 def cv2_to_torch(img):
-    return np.transpose(np.array(img).astype(np.float32) / 255, axes=(2, 0, 1))
+    return torch.tensor(np.transpose(np.array(img).astype(np.float32) / 255, axes=(2, 0, 1)))

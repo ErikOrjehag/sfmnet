@@ -24,6 +24,7 @@ class BaseTrainer():
 
         # The model to train
         self.model = model
+        self.model.to(self.DEVICE)
 
         # The loss function
         self.loss_fn = loss_fn

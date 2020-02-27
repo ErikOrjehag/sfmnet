@@ -1,12 +1,14 @@
 
 import data
-from networks.unsuperpoint import UnsuperPoint, UnsuperLoss
+from networks.unsuperpoint import SiameseUnsuperPoint, UnsuperLoss
+from base_trainer import BaseTrainer
 
-class PointTrainer():
+class PointTrainer(BaseTrainer):
 
     def __init__(self, args):
         super().__init__(
+            args,
             loaders=data.get_coco_batch_loader_split(args),
-            model=UnsuperPoint()
+            model=SiameseUnsuperPoint(),
             loss_fn=UnsuperLoss()
         )

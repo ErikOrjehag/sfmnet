@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import utils
 
-from kitti import Kitti
+from homo_adap_dataset import HomoAdapDataset
 
 def conv(in_channels, out_channels):
     return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1)
@@ -28,19 +28,16 @@ def bb_conv(in_channels, out_channels, last_layer=False):
 
 def rel_to_abs(P):
     B, _, H, W = P.shape
-    cols = torch.arange(0, W).view(1, 1, W).expand(B, H, W)
-    rows = torch.arange(0, H).view(1, H, 1).expand(B, H, W)
-    P[:,0] += cols
-    P[:,1] += rows
-    P *= 8
-    return P
+    cols = torch.arange(0, W, device=P.device).view(1, 1, W).expand(B, H, W)
+    rows = torch.arange(0, H, device=P.device).view(1, H, 1).expand(B, H, W)
+    return (P + torch.stack((cols, rows), dim=1)) * 8
 
 class UnsuperPoint(nn.Module):
 
     def __init__(self):
         super().__init__()
 
-        self.N = 300
+        self.N = 200
 
         self.backbone = nn.Sequential(
             bb_conv(3, 32),
@@ -106,8 +103,8 @@ class SiameseUnsuperPoint(nn.Module):
         self.unsuperpoint = UnsuperPoint()
 
     def forward(self, data):
-        A = self.unsuperpoint(data["original"])
-        B = self.unsuperpoint(data["transformed"])
+        A = self.unsuperpoint(data["img"])
+        B = self.unsuperpoint(data["warp"])
         outputs = {
             "A": A,
             "B": B
@@ -135,7 +132,7 @@ class UnsuperLoss():
         d = Cmin[mask]
         dmean = d.mean()
 
-        loss_position = d.sum()
+        l_position = d
         
         #BS_ = torch.stack([BS[i,ids[i]] for i in range(ids.shape[0])], dim=0)
         #loss_score = ((AS - BS_)[mask] ** 2).sum()
@@ -145,17 +142,19 @@ class UnsuperLoss():
         AS_ = AS.view(-1)[mask]
         BS_ = BS.view(-1)[ids][mask]
 
-        loss_score = (AS_ - BS_) ** 2
+        l_score = (AS_ - BS_) ** 2
 
         S_ = (AS_ + BS_) / 2
-        loss_usp = S_ * (d - dmean)
+        l_usp = S_ * (d - dmean)
 
-        x = 1
+        loss_usp = 1 * l_position.sum() + 2 * l_score.sum() + l_usp.sum()
 
-        return 0, {}
+        loss = 1 * loss_usp + 100 # * loss_uni_xy + 0.001 * loss_desc + 0.03 * loss_decorr
+
+        return loss, {}
 
 def main():
-    dataset = Kitti("/home/ai/Code/Data/kitti2")
+    dataset = HomoAdapDataset("/home/ai/Code/Data/coco/unlabeled2017/")
 
     loader = torch.utils.data.DataLoader(
         dataset, batch_size=4, shuffle=False,
@@ -167,8 +166,9 @@ def main():
     model.train()
 
     for data in loader:
-        output = model.forward({ "original": data["tgt"], "transformed": data["tgt"] })
+        output = model.forward(data)
         loss, debug = loss_fn(output)
+        print(loss.item())
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('spawn', True)
