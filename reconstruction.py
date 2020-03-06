@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from geometry import euler2mat
+from geometry import euler2mat, pose_vec2mat, to_homog_coords, to_homog_matrix, from_homog_coords
 
 _homog_pixel_coord_cache = None
 
@@ -14,35 +14,14 @@ def create_homog_pixel_coords(B, H, W, typ):
         ones = torch.ones(1, H, W).type(typ)
         _homog_pixel_coord_cache = torch.stack((x, y, ones), dim=1)
     return _homog_pixel_coord_cache[...,:H,:W].expand(B, 3, H, W)
-    
+
 def multiply_coords(matrix, coords):
     B, C, H, W = coords.shape
     flat = coords.reshape(B, C, -1) # [B,C,H*W]
     res = (matrix @ flat)
     res = res.reshape(B, -1, H, W)
     return res
- 
-def pose_vec2mat(vec):
-    t = vec[:,:3].unsqueeze(-1) # [B, 3, 1]
-    r = vec[:,3:]
-    R = euler2mat(r) # [B, 3, 3]
-    transform = torch.cat([R, t], dim=2) # [B, 3, 4]
-    return transform
-
-def to_homog_coords(coords):
-    return F.pad(input=coords, pad=(0, 0, 0, 0, 0, 1), mode="constant", value=1)
-
-def to_homog_matrix(matrix):
-    matrix = F.pad(input=matrix, pad=(0, 0, 0, 1), mode="constant", value=0)
-    matrix[...,-1,-1] = 1.0
-    return matrix
-
-def from_homog_coords(coords):
-    X = coords[:,0]
-    Y = coords[:, 1]
-    Z = coords[:, 2].clamp(min=1e-3)
-    return torch.stack((X/Z, Y/Z), dim=1)
-    
+     
 def to_sampling_grid(coords):
     B, C, H, W = coords.shape
     # -1 extreme left, +1 extreme right
@@ -87,7 +66,7 @@ def reconstruct_image(img, depth, pose, K):
     # Sample the source image in the projected pixel coordinates
     sampling_grid = to_sampling_grid(projected_pixel_coords)
 
-    reconstruction = F.grid_sample(img, sampling_grid, padding_mode="zeros", align_corners=True)
+    reconstruction = F.grid_sample(img, sampling_grid, padding_mode="border", align_corners=True)
 
     # Sampling points with abs value smaller than 1 are inside the frame
     valid_mask = sampling_grid.abs().max(dim=-1)[0] <=1
