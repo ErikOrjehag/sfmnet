@@ -94,8 +94,8 @@ class SequenceDataset(data.Dataset):
         sparse = self._load_depth(samples[0])
 
         inputs = {
-          "tgt": torch.tensor(tgt_img),
-          "refs": torch.tensor(refs_img),
+          "tgt": tgt_img,
+          "refs": torch.stack(refs_img),
           "K": torch.tensor(K),
           "gt_sparse": torch.tensor(sparse).unsqueeze(0)
         }

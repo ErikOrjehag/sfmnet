@@ -17,6 +17,7 @@ import sys
 from sfm_trainer import SfMTrainer
 from debugger import Debugger as SfMDebugger
 from point_trainer import PointTrainer
+from debugger_point import DebuggerPoint
 import tester
 
 def parse_args(extra=[]):
@@ -35,6 +36,8 @@ def main():
         action = SfMDebugger(parse_args(["loss", "dataset"]))
     elif choice == "point-train":
         action = PointTrainer(parse_args(["name", "batch", "train"]))
+    elif choice == "point-debug":
+        action = DebuggerPoint(parse_args(["loss"]))
     else:
         print("No such action to perform: %s" % choice)
         exit()

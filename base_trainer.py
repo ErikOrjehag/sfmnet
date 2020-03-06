@@ -23,8 +23,7 @@ class BaseTrainer():
         self.loaders = loaders
 
         # The model to train
-        self.model = model
-        self.model.to(self.DEVICE)
+        self.model = model.to(self.DEVICE)
 
         # The loss function
         self.loss_fn = loss_fn

@@ -55,9 +55,14 @@
             "name": "Unsuperpoint",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/networks/unsuperpoint.py",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "subProcess": true,
+            "args": [
+                "point-train",
+                "--workers",
+                "1",
+            ]
         },
         {
             "name": "Current File",

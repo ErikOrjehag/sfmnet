@@ -69,3 +69,6 @@ def get_loader(args):
 
 def get_coco_batch_loader_split(args):
     return _get_batch_loader_split(HomoAdapDataset, coco_path, args.batch, args.workers)
+
+def get_coco_loader(args):
+    return _get_loader(HomoAdapDataset, coco_path, args.workers)

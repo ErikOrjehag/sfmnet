@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import utils
 
+from geometry import from_homog_coords, to_homog_coords
+
 from homo_adap_dataset import HomoAdapDataset
 
 def conv(in_channels, out_channels):
@@ -110,11 +112,23 @@ class SiameseUnsuperPoint(nn.Module):
             "B": B
         }
         return outputs
-        
+
+def decorrelate(F):
+    f = F.permute(0,2,1)
+    mean = f.mean(dim=-1, keepdims=True)
+    b = f - mean
+    dot = (b.unsqueeze(2) * b.unsqueeze(1)).sum(dim=-1)
+    d = torch.sqrt(dot.diagonal(dim1=1,dim2=2))
+    dd = d.unsqueeze(2) * d.unsqueeze(1)
+    R = dot / dd
+    idx = torch.arange(0,R.shape[1],out=torch.LongTensor())
+    R[:,idx,idx] = 0
+    return R**2
+
 class UnsuperLoss():
 
     def __init__(self):
-        self.CORR_DIST = 8
+        pass
 
     def __call__(self, data):
         AP = data["A"]["P"]
@@ -123,15 +137,25 @@ class UnsuperLoss():
         BP = data["B"]["P"]
         BS = data["B"]["S"]
         BF = data["B"]["F"]
+        homog = data["homography"]
 
-        C = (AP.permute(0,2,1).unsqueeze(2) - BP.permute(0,2,1).unsqueeze(1)).norm(dim=-1)
+        B, N = AS.shape
+        
+        # Points from branch A transformed by homography        
+        APh = from_homog_coords(homog @ to_homog_coords(AP))
 
-        Cmin, ids = torch.min(C, dim=1)
-        mask = Cmin.le(self.CORR_DIST)
+        # Matrix of distances between points
+        D = (APh.permute(0,2,1).unsqueeze(2) - BP.permute(0,2,1).unsqueeze(1)).norm(dim=-1)
 
-        d = Cmin[mask]
+        # Create ids which maps the B points to its closest A point
+        Dmin, ids = torch.min(D, dim=1)
+        # Create a mask for only the maped ids that are closer than a threshold.
+        mask = Dmin.le(4)
+
+        d = Dmin[mask]
         dmean = d.mean()
 
+        # Distances between corresponding points should be small
         l_position = d
         
         #BS_ = torch.stack([BS[i,ids[i]] for i in range(ids.shape[0])], dim=0)
@@ -142,14 +166,36 @@ class UnsuperLoss():
         AS_ = AS.view(-1)[mask]
         BS_ = BS.view(-1)[ids][mask]
 
+        # Scores of corresonding points should be similar to each other
         l_score = (AS_ - BS_) ** 2
 
+        # Increase score if they are near, supress score if they are far
         S_ = (AS_ + BS_) / 2
         l_usp = S_ * (d - dmean)
 
-        loss_usp = 1 * l_position.sum() + 2 * l_score.sum() + l_usp.sum()
+        # Descriptor
+        C = D.le(8)
+        lam_d = 100
+        mp = 1
+        mn = 0.2
+        af = AF.permute(0,2,1).unsqueeze(2)
+        bf = BF.permute(0,2,1).unsqueeze(1)
+        dot = (af * bf).sum(dim=-1) # [B,N,N]
+        pos = torch.max(mp - dot, 0).values
+        neg = torch.max(dot - mn, 0).values
+        l_desc = (lam_d * C * pos + (~C) * neg)
 
-        loss = 1 * loss_usp + 100 # * loss_uni_xy + 0.001 * loss_desc + 0.03 * loss_decorr
+        # Decorrelation
+        l_decorr_a = decorrelate(AF)
+        l_decorr_b = decorrelate(BF)
+        l_decorr = 0.5 * (l_decorr_a + l_decorr_b)
+
+        # Loss terms
+        loss_usp = 1 * l_position.sum() + 2 * l_score.sum() + l_usp.sum()
+        loss_desc = l_desc.sum()
+        loss_decorr = l_decorr.sum()
+
+        loss = 1 * loss_usp + 0.001 * loss_desc + 0.03 * loss_decorr # + 100 * loss_uni_xy
 
         return loss, {}
 
@@ -166,6 +212,7 @@ def main():
     model.train()
 
     for data in loader:
+        print(list(data.keys()))
         output = model.forward(data)
         loss, debug = loss_fn(output)
         print(loss.item())
