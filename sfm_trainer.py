@@ -9,6 +9,7 @@ class SfMTrainer(BaseTrainer):
 
     def __init__(self, args):
         super().__init__(
+            args,
             loaders=data.get_batch_loader_split(args),
             model=networks.architectures.get_net(args),
             loss_fn=sfm_loss.get_loss_fn(args)

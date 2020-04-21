@@ -53,6 +53,13 @@ def main():
   Missing images in 02 and 03:
   2011_09_26_drive_0119_sync
 
+  Very few images and they are junk:
+  du -a | grep jpg | cut -d/ -f2 | sort | uniq -c | sort -nr
+  2011_09_28_drive_0039_sync
+  2011_09_26_drive_0017_sync
+  2011_09_28_drive_0034_sync
+  2011_09_28_drive_0043_sync
+  
 
   du -a | grep velodyne_points/data | cut -d/ -f3 | sort | uniq -c | sort -nr | grep " 1 "
   du -a | grep image_03/data | cut -d/ -f3 | sort | uniq -c | sort -nr | grep " 1 "

@@ -3,18 +3,31 @@ import glob
 import os
 import numpy as np
 from sequence_dataset import SequenceDataset
+import json
 
 def Rt_to_T(Rt):
     return np.vstack((Rt, np.array([0, 0, 0, 1])))
 
-class Kitti(SequenceDataset):
+def get_intrinsics(sequence):
+    p = sorted(glob.glob(os.path.join(sequence, "Information", "*.json")))[0]
+    print(p)
+    with open(p) as f:
+        data = json.load(f)
+    intrinsics = np.array(data["intrinsic"]["matrix"]).reshape(4,4)
+    extrinsic = np.array(data["extrinsic"]["matrix"]).reshape(4,4)
+    print(intrinsics)
+    print(extrinsic)
+    exit()
+    #np.genfromtxt(os.path.join(sequence, "cam.txt"), 
+    #        delimiter=" ", dtype=np.float32).reshape((3, 3))
 
-    def __init__(self, root, split=None):
-        super().__init__(root, split)
+class Synthia(SequenceDataset):
+
+    def __init__(self, root, load_gt=True):
+        super().__init__(root, load_gt)
 
         self.intrinsics = [
-            np.genfromtxt(os.path.join(sequence, "cam.txt"), 
-            delimiter=" ", dtype=np.float32).reshape((3, 3))
+            get_intrinsics(sequence)
             for sequence in self.sequences]
 
         self.poses = []
@@ -23,7 +36,7 @@ class Kitti(SequenceDataset):
                 self.poses.append( [ Rt_to_T(np.fromstring(line, sep=" ", dtype=np.float64).reshape(3, 4)) for line in f.readlines() ] )
 
     def _get_sequences(self):
-        return sorted(glob.glob(os.path.join(self.root, "*", "")))
+        return sorted(glob.glob(os.path.join(self.root, "*", "*", "")))
 
     def _get_samples(self, sequence):
         return [(i, path) for i, path in enumerate(sorted(glob.glob(os.path.join(sequence, "*.jpg"))))]

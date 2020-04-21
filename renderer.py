@@ -33,6 +33,7 @@ class Renderer():
         return pango.ShouldQuit()
 
     def clear_screen(self):
+        self.dcam.Activate(self.scam)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glClearColor(1.0, 1.0, 1.0, 1.0)
 
@@ -41,13 +42,18 @@ class Renderer():
         gl.glPointSize(5)
         pango.DrawPoints(points, colors)
     
-    def draw_camera(self):
+    def draw_cameras(self, Ts, color=(0.0, 0.0, 1.0)):
         self.dcam.Activate(self.scam)
-        pose = np.identity(4)
-        pose[:3, 3] = 0
         gl.glLineWidth(1)
-        gl.glColor3f(0.0, 0.0, 1.0)
-        pango.DrawCamera(pose, 0.5, 0.75, 0.8)
+        gl.glColor3f(*color)
+        pango.DrawCameras(Ts, h_ratio=0.31, z_ratio=0.5)
+
+    def draw_line(self, points, color=(1.0, 0.0, 0.0)):
+        self.dcam.Activate(self.scam)
+        gl.glLineWidth(2)
+        gl.glColor3f(*color)
+        pango.DrawLine(points)
 
     def finish_frame(self):
+        self.dcam.Activate(self.scam)
         pango.FinishFrame()

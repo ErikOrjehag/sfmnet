@@ -22,13 +22,30 @@ def backward_pass(optimizer, loss):
     optimizer.step()
 
 def dict_to_device(keyval, device):
-    return map_dict(keyval, lambda val: val.to(device))
+    return map_dict(keyval, lambda key, val: val.to(device))
 
 def dict_tensors_to_num(keyval):
-    return map_dict(keyval, lambda val: val.cpu().item())
+    return map_dict(keyval, lambda key, val: val.cpu().item())
+
+def dict_append(d1, d2):
+    for key, val in d2.items():
+        if key not in d1:
+            d1[key] = [ val ]
+    def fun(key, val):
+        if isinstance(val, list):
+            return val + [ d2[key] ]
+        else:
+            return [ val ] + [ d2[key] ]
+    return map_dict(d1, fun)
+
+def dict_mean(d):
+    return map_dict(d, lambda key, val: np.mean(val))
+
+def dict_std(d):
+    return map_dict(d, lambda key, val: np.std(val))
 
 def map_dict(keyval, f):
-    return { key: f(val) for key, val in keyval.items() }
+    return { key: f(key, val) for key, val in keyval.items() }
 
 def normalize_map(map):
     mean_map = map.mean(dim=2, keepdim=True).mean(dim=3, keepdim=True)
@@ -69,3 +86,6 @@ def normalize_image(img):
 
 def cv2_to_torch(img):
     return torch.tensor(np.transpose(np.array(img).astype(np.float32) / 255, axes=(2, 0, 1)))
+
+def torch_to_numpy(tensor):
+    return tensor.detach().cpu().numpy()

@@ -21,6 +21,7 @@ class BaseTrainer():
 
         # Train, Val, Test loaders
         self.loaders = loaders
+        # print number of samples
 
         # The model to train
         self.model = model.to(self.DEVICE)

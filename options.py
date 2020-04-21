@@ -2,7 +2,7 @@
 import argparse
 import torch
 
-def get_args(description, options):
+def get_args(description, options, overwrite):
   parser = argparse.ArgumentParser(description=description)
   if "name" in options:
     parser.add_argument("--name", default="", type=str, help="The run name.")
@@ -13,7 +13,7 @@ def get_args(description, options):
   if "device" in options:
     parser.add_argument("--device", default="cuda", type=str, help="The device to run on cpu/cuda.")
   if "dataset" in options:
-    parser.add_argument("--dataset", default="kitti", type=str, choices=["kitti", "lyft"], help="Which dataset (kitti/lyft).")
+    parser.add_argument("--dataset", default="kitti", type=str, choices=["kitti", "lyft", "lyft_kittistyle", "synthia"], help="Which dataset (kitti/lyft/lyft_kittistyle/synthia).")
   
   if "load" in options:
     parser.add_argument("--load", default="", type=str, help="Load state file.")
@@ -41,6 +41,10 @@ def get_args(description, options):
     parser.add_argument("--max-depth", default=100, type=float, help="Maximum depth predicted.")
   
   args = parser.parse_args()
+
+  for key, val in overwrite.items():
+    args.__dict__[key] = val
+
   print("\nCurrent arguments -> ", args, "\n")
 
   if args.device == "cuda" and not torch.cuda.is_available():

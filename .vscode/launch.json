@@ -71,6 +71,25 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "subProcess": true,
-        }
+        },
+        {
+            "name": "SFM Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "sfm-debug",
+                "--workers",
+                "1",
+                "--dataset",
+                "kitti",
+                "--net",
+                "monodepth2",
+                "--load",
+                "checkpoints/mono/epoch_5.pt"
+            ]
+        },
     ]
 }

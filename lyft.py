@@ -7,7 +7,7 @@ from pyquaternion import Quaternion
 
 class Lyft(SequenceDataset):
 
-    def __init__(self, root, load_gt=True):
+    def __init__(self, root, split=None):
 
         self.data = LyftDataset(
             data_path=root, 
@@ -16,7 +16,7 @@ class Lyft(SequenceDataset):
 
         self.explorer = LyftDatasetExplorer(self.data)
         
-        super().__init__(root, load_gt)
+        super().__init__(root, split)
         
     def _get_sequences(self):
         return [(scene["first_sample_token"], "CAM_FRONT") for scene in self.data.scene]
@@ -42,10 +42,19 @@ class Lyft(SequenceDataset):
         
         T = Quaternion(pose_record["rotation"]).transformation_matrix
         T[:3,3] = np.array(pose_record["translation"])
-
+        #print("before", T)
+        T = T @ np.array([
+            [0, 0, 1, 0],
+            [-1, 0, 0, 0],
+            [0, -1, 0, 0],
+            [0, 0, 0, 1],
+        ])
+        #print("after", T)
+        
+        
         img, K = self._load_image_from_disk(self.data.get_sample_data_path(sample), K)
 
-        return img, T, K
+        return [img, T, K]
         
     def _load_depth(self, sample):
         sample_data = self.data.get("sample_data", sample)
