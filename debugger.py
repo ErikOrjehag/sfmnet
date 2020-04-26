@@ -126,7 +126,7 @@ class Debugger():
             line_gt = [T[:3,3] for T in self.positions_gt]
             self.renderer.draw_line(line, color=(1.,0.,0.))
             self.renderer.draw_line(line_gt, color=(0.,1.,0.))
-            self.renderer.draw_cameras([T0], color=(1.,0.,0.))
-            self.renderer.draw_cameras([T1], color=(0.,1.,0.))
-            self.renderer.draw_cameras([T2], color=(0.,0.,1.))
+            #self.renderer.draw_cameras([T0], color=(1.,0.,0.))
+            #self.renderer.draw_cameras([T1], color=(0.,1.,0.))
+            #self.renderer.draw_cameras([T2], color=(0.,0.,1.))
             self.renderer.finish_frame()

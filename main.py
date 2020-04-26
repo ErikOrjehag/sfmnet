@@ -36,7 +36,7 @@ def main():
     elif choice == "sfm-debug":
         action = SfMDebugger(parse_args(["loss", "dataset"]))
     elif choice == "sfm-test":
-        action = SfMTester(parse_args(["dataset"], overwrite={"batch": 1}))
+        action = SfMTester(parse_args(["dataset", "loss"], overwrite={"batch": 1}))
     elif choice == "point-train":
         action = PointTrainer(parse_args(["name", "batch", "train"]))
     elif choice == "point-debug":

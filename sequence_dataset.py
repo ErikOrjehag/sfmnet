@@ -33,7 +33,7 @@ class SequenceDataset(data.Dataset):
     TEST_RATIO = 0.1
 
     if split is None:
-      self.sequences == sequences
+      self.sequences = sequences
     else:
       test_n = int(TEST_RATIO * len(sequences))
       random.seed(1337)

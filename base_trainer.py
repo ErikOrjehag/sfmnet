@@ -22,6 +22,7 @@ class BaseTrainer():
         # Train, Val, Test loaders
         self.loaders = loaders
         # print number of samples
+        print("Train images: ", len(self.loaders["train"]))
 
         # The model to train
         self.model = model.to(self.DEVICE)
