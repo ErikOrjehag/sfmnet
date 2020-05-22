@@ -82,6 +82,7 @@ def is_interval(step, interval):
 
 def normalize_image(img):
     #x = (input_image - 0.45) / 0.225
+    # (img - 0.5) * 0.225 from unsuperpoint paper
     return img * 2 - 1
 
 def cv2_to_torch(img):

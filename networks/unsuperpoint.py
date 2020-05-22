@@ -36,10 +36,10 @@ def rel_to_abs(P):
 
 class UnsuperPoint(nn.Module):
 
-    def __init__(self):
+    def __init__(self, N):
         super().__init__()
 
-        self.N = 200
+        self.N = N
 
         self.backbone = nn.Sequential(
             bb_conv(3, 32),
@@ -77,32 +77,42 @@ class UnsuperPoint(nn.Module):
     def forward(self, image):
         B, _, H, W = image.shape
         image = utils.normalize_image(image)
+        
+        # CNN (joint backbone, separate decoder heads)
         features = self.backbone(image)
         S = self.score_decoder(features)
-        P = rel_to_abs(self.position_decoder(features))
+        Prel = self.position_decoder(features)
         F = self.descriptor_decoder(features)
-
+        
+        # Relative to absolute pixel coordinates
+        P = rel_to_abs(Prel)
+        
+        # Flatten
         Sflat = S.view(B, -1)
         Pflat = P.view(B, 2, -1)
+        Prelflat = Prel.view(B, 2, -1)
         Fflat = F.view(B, 256, -1)
 
+        # Get data with top N score (S)
         Smax, ids = torch.topk(Sflat, k=self.N, dim=1, largest=True, sorted=False)
         Pmax = torch.stack([Pflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
+        #Prelmax = torch.stack([Prelflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
         Fmax = torch.stack([Fflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
 
         outputs = {
             "S": Smax,
             "P": Pmax,
-            "F": Fmax
+            "Prel": Prelflat,
+            "F": Fmax,
         }
 
         return outputs
 
 class SiameseUnsuperPoint(nn.Module):
 
-    def __init__(self):
+    def __init__(self, N=200):
         super().__init__()
-        self.unsuperpoint = UnsuperPoint()
+        self.unsuperpoint = UnsuperPoint(N=N)
 
     def forward(self, data):
         A = self.unsuperpoint(data["img"])
@@ -125,30 +135,49 @@ def decorrelate(F):
     R[:,idx,idx] = 0
     return R**2
 
+def uniform_distribution_loss(values, a=0., b=1.):
+    v = torch.sort(values.flatten())[0]
+    L = v.shape[0]
+    i = torch.arange(1, L+1, dtype=torch.float).to(values.device)
+    s = ( (v-a) / (b-a) - (i-1) / (L-1) )**2
+    return s
+
 class UnsuperLoss():
 
     def __init__(self):
         pass
 
     def __call__(self, data):
+        APrel = data["A"]["Prel"]
         AP = data["A"]["P"]
         AS = data["A"]["S"]
         AF = data["A"]["F"]
+        BPrel = data["B"]["Prel"]
         BP = data["B"]["P"]
         BS = data["B"]["S"]
         BF = data["B"]["F"]
         homog = data["homography"]
+        H, W = data["img"].shape[2:]
+
+        #print("homog", homog[0], "AP", AP.shape)
 
         B, N = AS.shape
+
+        T = torch.tensor([
+            [1, 0, W/2.],
+            [0, 1, H/2.],
+            [0, 0, 1],
+        ], dtype=torch.float).repeat(B,1,1).to(homog.device)
         
         # Points from branch A transformed by homography        
-        APh = from_homog_coords(homog @ to_homog_coords(AP))
+        APh = from_homog_coords(T @ homog @ torch.inverse(T) @ to_homog_coords(AP))
 
         # Matrix of distances between points
         D = (APh.permute(0,2,1).unsqueeze(2) - BP.permute(0,2,1).unsqueeze(1)).norm(dim=-1)
 
-        # Create ids which maps the B points to its closest A point
+        # Create ids which maps the B points to its closest A point (A[ids] <-> B)
         Dmin, ids = torch.min(D, dim=1)
+
         # Create a mask for only the maped ids that are closer than a threshold.
         mask = Dmin.le(4)
 
@@ -157,14 +186,11 @@ class UnsuperLoss():
 
         # Distances between corresponding points should be small
         l_position = d
-        
-        #BS_ = torch.stack([BS[i,ids[i]] for i in range(ids.shape[0])], dim=0)
-        #loss_score = ((AS - BS_)[mask] ** 2).sum()
 
-        mask = mask.view(-1)
-        ids = ids.view(-1)
-        AS_ = AS.view(-1)[mask]
-        BS_ = BS.view(-1)[ids][mask]
+        mask_ = mask.view(-1)
+        ids_ = ids.view(-1)
+        AS_ = AS.view(-1)[ids_][mask_] # see debugger_point
+        BS_ = BS.view(-1)[mask_]
 
         # Scores of corresonding points should be similar to each other
         l_score = (AS_ - BS_) ** 2
@@ -181,8 +207,8 @@ class UnsuperLoss():
         af = AF.permute(0,2,1).unsqueeze(2)
         bf = BF.permute(0,2,1).unsqueeze(1)
         dot = (af * bf).sum(dim=-1) # [B,N,N]
-        pos = torch.max(mp - dot, 0).values
-        neg = torch.max(dot - mn, 0).values
+        pos = torch.clamp(mp - dot, min=0)
+        neg = torch.clamp(dot - mn, min=0)
         l_desc = (lam_d * C * pos + (~C) * neg)
 
         # Decorrelation
@@ -190,14 +216,21 @@ class UnsuperLoss():
         l_decorr_b = decorrelate(BF)
         l_decorr = 0.5 * (l_decorr_a + l_decorr_b)
 
+        # Uniform distribution of relative positions
+        l_uni_ax = uniform_distribution_loss(APrel[:,0,:])
+        l_uni_ay = uniform_distribution_loss(APrel[:,1,:])
+        l_uni_bx = uniform_distribution_loss(BPrel[:,0,:])
+        l_uni_by = uniform_distribution_loss(BPrel[:,1,:])
+
         # Loss terms
         loss_usp = 1 * l_position.sum() + 2 * l_score.sum() + l_usp.sum()
         loss_desc = l_desc.sum()
         loss_decorr = l_decorr.sum()
+        loss_uni_xy = l_uni_ax.sum() + l_uni_ay.sum() + l_uni_bx.sum() + l_uni_by.sum()
 
-        loss = 1 * loss_usp + 0.001 * loss_desc + 0.03 * loss_decorr # + 100 * loss_uni_xy
+        loss = 1 * loss_usp + 0.001 * loss_desc + 0.03 * loss_decorr + 100 * loss_uni_xy
 
-        return loss, {}
+        return loss, { "ids": ids, "mask": mask, "APh": APh }
 
 def main():
     dataset = HomoAdapDataset("/home/ai/Code/Data/coco/unlabeled2017/")
@@ -211,11 +244,18 @@ def main():
     model = SiameseUnsuperPoint()
     model.train()
 
-    for data in loader:
-        print(list(data.keys()))
-        output = model.forward(data)
-        loss, debug = loss_fn(output)
+    optimizer = torch.optim.Adam(model.parameters())
+
+    for inputs in loader:
+        print(list(inputs.keys()))
+
+        with torch.enable_grad():
+            loss, data = utils.forward_pass(model, loss_fn, inputs)
+
         print(loss.item())
+
+        utils.backward_pass(optimizer, loss)
+
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('spawn', True)

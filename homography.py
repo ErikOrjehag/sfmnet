@@ -9,7 +9,7 @@ import viz
 
 def random_euclidian(rotation, translation, scale):
     r = np.random.uniform(-1, 1) * rotation
-    s = np.random.uniform(0, 1) * scale + 1
+    s = np.random.uniform(-1, 1) * scale + 1
     tx = np.random.uniform(-1, 1) * translation
     ty = np.random.uniform(-1, 1) * translation
     T = np.array([
@@ -88,7 +88,7 @@ def warp_image(img, homography):
         .transpose(0,1) \
         .to(img.device) \
         .contiguous()
-    warped_grid = homo_warp_grid(grid, homography)
+    warped_grid = homo_warp_grid(grid, torch.inverse(homography))
     warped_grid[:,:,:,0] /= (W/2)
     warped_grid[:,:,:,1] /= (H/2)
     warped_img = F.grid_sample(img, warped_grid, mode="bilinear", align_corners=True)
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     
     while True:
         
-        homography = random_homographies(img.shape[0], rotation=np.pi/8, translation=50, scale=0.5, sheer=0.1, projective=0.001)
+        homography = random_homographies(img.shape[0], rotation=np.pi/8, translation=50, scale=0.1, sheer=0.1, projective=0.001)
         
         warp = warp_image(img, homography)
 

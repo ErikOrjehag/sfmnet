@@ -22,7 +22,7 @@ def to_homog_matrix(matrix):
 def from_homog_coords(coords):
     X = coords[:,0]
     Y = coords[:,1]
-    Z = coords[:,2].clamp(min=1e-3)
+    Z = coords[:,2]#.clamp(min=1e-3)
     return torch.stack((X/Z, Y/Z), dim=1)
 
 def euler2mat(angle):

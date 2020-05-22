@@ -39,7 +39,9 @@ class HomoAdapDataset(data.Dataset):
             img = np.stack((img,)*3, axis=-1)
         img = self.scale_crop(img)
         img = utils.cv2_to_torch(img)
-        h = homography.random_homography(rotation=np.pi/8, translation=50, scale=0.5, sheer=0.1, projective=0.001)
+        #h = homography.random_homography(rotation=np.pi/8, translation=50, scale=0.5, sheer=0.1, projective=0.001)
+        #h = homography.random_homography(rotation=0, translation=0, scale=0.2, sheer=0, projective=0)
+        h = homography.random_homography(rotation=np.pi/20, translation=10, scale=0.2, sheer=0.05, projective=0.001)
         warp = homography.warp_image(img, h)
         data = { 
             "img": img,
