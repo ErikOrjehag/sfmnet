@@ -37,9 +37,14 @@ def draw_matches(img1, img2, pts1, pts2):
   i = 0
   for p1, p2 in zip(pts1, pts2):
     p2 += np.array([W, 0])
-    img = cv2.line(img, tuple(p1), tuple(p2), pretty_color(i, N), 1)
+    c = pretty_color(i, N)
+    p1 = tuple(p1)
+    p2 = tuple(p2)
+    img = cv2.line(img, p1, p2, c, 1)
+    img = cv2.circle(img, p1, 4, c, 1)
+    img = cv2.circle(img, p2, 4, c, 1)
     i += 1
-  return img
+  return img.get()
 
 def pretty_color(i, n):
   rgb = colorsys.hsv_to_rgb(((i*2)/(n-1)) % n, 0.8, 1.0)

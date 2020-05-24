@@ -16,7 +16,10 @@ def get_args(description, options, overwrite):
     parser.add_argument("--dataset", default="kitti", type=str, choices=["kitti", "lyft", "lyft_kittistyle", "synthia"], help="Which dataset (kitti/lyft/lyft_kittistyle/synthia).")
   
   if "load" in options:
-    parser.add_argument("--load", default="", type=str, help="Load state file.")
+    parser.add_argument("--load", default="", type=str, help="Load state file for full model.")
+    parser.add_argument("--load-depth", default="", type=str, help="Load state file for depth model component.")
+    parser.add_argument("--load-point", default="", type=str, help="Load state file for unsuperpoint model component.")
+    parser.add_argument("--load-consensus", default="", type=str, help="Load state file for consensus model component.")
   
   if "train" in options:
     parser.add_argument("--lr", default=0.0002, type=float, help="Learning rate.")

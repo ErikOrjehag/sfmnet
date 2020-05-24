@@ -12,9 +12,11 @@ from geometry import from_homog_coords, to_homog_coords
 from homo_adap_dataset import HomoAdapDataset
 
 def conv(in_channels, out_channels):
+    # Create conv2d layer
     return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1)
 
 def bb_conv(in_channels, out_channels, last_layer=False):
+    # Create 2 conv layers separated by batch norm and leaky relu
     if last_layer:
         last = []
     else:
@@ -29,11 +31,48 @@ def bb_conv(in_channels, out_channels, last_layer=False):
         )
 
 def rel_to_abs(P):
+    # Convert local (relative) positions P to global pixel positions
     B, _, H, W = P.shape
     cols = torch.arange(0, W, device=P.device).view(1, 1, W).expand(B, H, W)
     rows = torch.arange(0, H, device=P.device).view(1, H, 1).expand(B, H, W)
     return (P + torch.stack((cols, rows), dim=1)) * 8
 
+def decorrelate(F):
+    # Create a correlation matrix of feature vector F than can be
+    # used to formulate a decorrelation loss
+    f = F.permute(0,2,1)
+    mean = f.mean(dim=-1, keepdims=True)
+    b = f - mean
+    dot = (b.unsqueeze(2) * b.unsqueeze(1)).sum(dim=-1)
+    d = torch.sqrt(dot.diagonal(dim1=1,dim2=2))
+    dd = d.unsqueeze(2) * d.unsqueeze(1)
+    R = dot / dd
+    idx = torch.arange(0,R.shape[1],out=torch.LongTensor())
+    R[:,idx,idx] = 0
+    return R**2
+
+def uniform_distribution_loss(values, a=0., b=1.):
+    # Create a loss that enforces uniform distribution 
+    # of values in the interval [a, b]
+    v = torch.sort(values.flatten())[0]
+    L = v.shape[0]
+    i = torch.arange(1, L+1, dtype=torch.float).to(values.device)
+    s = ( (v-a) / (b-a) - (i-1) / (L-1) )**2
+    return s
+
+def brute_force_match(AF, BF):
+    # Brute force match descriptor vectors [B,256,N]
+    af = AF.permute(0,2,1).unsqueeze(2)
+    bf = BF.permute(0,2,1).unsqueeze(1)
+    l2 = (af - bf).norm(dim=-1) # [B,N,N]
+    Aids = torch.argmin(l2, dim=1) # [B,N]
+    Bids = torch.argmin(l2, dim=2) # [B,N]
+    B, N = Bids.shape
+    match = Aids.flatten()[Bids.flatten()].reshape(B,N) # [B,N]
+    asc = torch.arange(0, N).repeat(B,1).to(match.device)
+    crossCheckMask = (match == asc)
+    return Bids, crossCheckMask
+    
 class UnsuperPoint(nn.Module):
 
     def __init__(self, N):
@@ -122,25 +161,6 @@ class SiameseUnsuperPoint(nn.Module):
             "B": B
         }
         return outputs
-
-def decorrelate(F):
-    f = F.permute(0,2,1)
-    mean = f.mean(dim=-1, keepdims=True)
-    b = f - mean
-    dot = (b.unsqueeze(2) * b.unsqueeze(1)).sum(dim=-1)
-    d = torch.sqrt(dot.diagonal(dim1=1,dim2=2))
-    dd = d.unsqueeze(2) * d.unsqueeze(1)
-    R = dot / dd
-    idx = torch.arange(0,R.shape[1],out=torch.LongTensor())
-    R[:,idx,idx] = 0
-    return R**2
-
-def uniform_distribution_loss(values, a=0., b=1.):
-    v = torch.sort(values.flatten())[0]
-    L = v.shape[0]
-    i = torch.arange(1, L+1, dtype=torch.float).to(values.device)
-    s = ( (v-a) / (b-a) - (i-1) / (L-1) )**2
-    return s
 
 class UnsuperLoss():
 
@@ -253,6 +273,8 @@ def main():
             loss, data = utils.forward_pass(model, loss_fn, inputs)
 
         print(loss.item())
+
+        brute_force_match(data["A"]["F"], data["B"]["F"])
 
         utils.backward_pass(optimizer, loss)
 

@@ -34,13 +34,8 @@ class BaseTrainer():
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr, betas=(0.9, 0.999))
 
         # Load
-        if args.load != "":
-            checkpoint = torch.load(args.load, map_location=torch.device(args.device))
-            self.model.load_state_dict(checkpoint["model"])
-            self.optimizer.load_state_dict(checkpoint["optimizer"])
-            self.EPOCH_START = checkpoint["epoch"]
-        else:
-            self.EPOCH_START = 0
+        self.EPOCH_START = 0
+        self.load_checkpoint(args)
 
         # Setup checkpoint directory
         self.SHOULD_CHECKPOINT = (args.name != "")
@@ -134,5 +129,13 @@ class BaseTrainer():
         metrics = self.calc_metrics(data)
         utils.sum_to_dict(metrics_sum, metrics)
 
+    # This can be overridden in child classes
     def calc_metrics(self, data):
         return {}
+
+    # This can be overridden in child classes
+    def load_checkpoint(self, args):
+        checkpoint = torch.load(args.load, map_location=torch.device(args.device))
+        self.model.load_state_dict(checkpoint["model"])
+        self.optimizer.load_state_dict(checkpoint["optimizer"])
+        self.EPOCH_START = checkpoint["epoch"]

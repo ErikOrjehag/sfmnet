@@ -91,5 +91,20 @@
                 "checkpoints/mono/epoch_5.pt"
             ]
         },
+        {
+            "name": "Train fundamental",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "fcons-train",
+                "--workers",
+                "1",
+                "--load-point",
+                "checkpoints/pointuni2/epoch_30.pt",
+            ]
+        },
     ]
 }
