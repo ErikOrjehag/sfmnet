@@ -30,22 +30,37 @@ def tensor2diffimg(img):
   img = img.cpu().detach().numpy()
   return np.uint8(np.transpose(img, (1, 2, 0))[:,:,::-1] * 255)
 
-def draw_matches(img1, img2, pts1, pts2):
+def draw_matches(img1, img2, pts1, pts2, inliers=None):
   H, W = img1.shape[:2]
   N = pts1.shape[0]
+  if inliers is None:
+    inliers = np.array([True] * N)
+  outliers = ~inliers
   img = np.concatenate((img1, img2), axis=1)
-  i = 0
-  for p1, p2 in zip(pts1, pts2):
-    p2 += np.array([W, 0])
-    c = pretty_color(i, N)
+
+  def _draw_match(img, p1, p2, c, w=1):
     p1 = tuple(p1)
     p2 = tuple(p2)
-    img = cv2.line(img, p1, p2, c, 1)
-    img = cv2.circle(img, p1, 4, c, 1)
-    img = cv2.circle(img, p2, 4, c, 1)
-    i += 1
+    img = cv2.line(img, p1, p2, c, w)
+    img = cv2.circle(img, p1, 4, c, w)
+    img = cv2.circle(img, p2, 4, c, w)
+    return img
+
+  for i, p1p2 in enumerate(zip(pts1[inliers], pts2[inliers])):
+    p1, p2 = p1p2
+    p2 += np.array([W, 0])
+    c = pretty_color(i, N)
+    img = _draw_match(img, p1, p2, c)
+  for i, p1p2 in enumerate(zip(pts1[outliers], pts2[outliers])):
+    p1, p2 = p1p2
+    p2 += np.array([W, 0])
+    c = (0,0,255)
+    img = _draw_match(img, p1, p2, c, w=2)
+
   return img.get()
 
+
 def pretty_color(i, n):
-  rgb = colorsys.hsv_to_rgb(((i*2)/(n-1)) % n, 0.8, 1.0)
+  n = max(n,1)
+  rgb = colorsys.hsv_to_rgb(((i*10)/(n-1)) % n, 0.8, 0.8)
   return (rgb[2]*255, rgb[1]*255, rgb[0]*255)

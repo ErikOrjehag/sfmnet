@@ -31,7 +31,7 @@ class BaseTrainer():
         self.loss_fn = loss_fn
 
         # Optimizer
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr, betas=(0.9, 0.999))
+        self.optimizer = torch.optim.Adam(self.get_parameter_groups(), lr=args.lr, betas=(0.9, 0.999))
 
         # Load
         self.EPOCH_START = 0
@@ -134,8 +134,12 @@ class BaseTrainer():
         return {}
 
     # This can be overridden in child classes
+    def get_parameter_groups(self):
+        return self.model.parameters()
+
+    # This can be overridden in child classes
     def load_checkpoint(self, args):
         checkpoint = torch.load(args.load, map_location=torch.device(args.device))
         self.model.load_state_dict(checkpoint["model"])
         self.optimizer.load_state_dict(checkpoint["optimizer"])
-        self.EPOCH_START = checkpoint["epoch"]
+        #self.EPOCH_START = checkpoint["epoch"]

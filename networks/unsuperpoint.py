@@ -62,13 +62,15 @@ def uniform_distribution_loss(values, a=0., b=1.):
 
 def brute_force_match(AF, BF):
     # Brute force match descriptor vectors [B,256,N]
-    af = AF.permute(0,2,1).unsqueeze(2)
+    af = AF.permute(0,2,1).unsqueeze(2) # [B,N,256]
     bf = BF.permute(0,2,1).unsqueeze(1)
     l2 = (af - bf).norm(dim=-1) # [B,N,N]
     Aids = torch.argmin(l2, dim=1) # [B,N]
     Bids = torch.argmin(l2, dim=2) # [B,N]
     B, N = Bids.shape
-    match = Aids.flatten()[Bids.flatten()].reshape(B,N) # [B,N]
+    #offset = (torch.arange(0,B)*N).to(AF.device).repeat_interleave(N)
+    #match = Aids.flatten()[offset+Bids.flatten()].reshape(B,N) # [B,N]
+    match = torch.stack([ Aids[b][Bids[b]] for b in range(B) ])
     asc = torch.arange(0, N).repeat(B,1).to(match.device)
     crossCheckMask = (match == asc)
     return Bids, crossCheckMask
@@ -200,6 +202,8 @@ class UnsuperLoss():
 
         # Create a mask for only the maped ids that are closer than a threshold.
         mask = Dmin.le(4)
+
+        print(mask[0].sum(), mask[1].sum(), mask[2].sum(), mask[3].sum())
 
         d = Dmin[mask]
         dmean = d.mean()

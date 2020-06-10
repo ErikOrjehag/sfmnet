@@ -14,6 +14,25 @@ class FundamentalTrainer(BaseTrainer):
             loss_fn=FundamentalConsensusLoss()
         )
 
+    #def get_parameter_groups(self):
+    #    return [
+    #        { 'params': self.model.siamese_unsuperpoint.parameters() },
+    #    #    { 'params': self.model.pointnet_binseg.parameters() },
+    #    ]
+
+    
     def load_checkpoint(self, args):
         point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
         self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
+    
+        #self.optimizer.add_param_group({'params': self.model.siamese_unsuperpoint.parameters() })
+        #self.optimizer.load_state_dict(point_checkpoint["optimizer"])
+        #self.optimizer.add_param_group({'params': self.model.pointnet_binseg.parameters() })
+
+        #state = self.optimizer.state_dict()
+
+        #point_optim = point_checkpoint["optimizer"]
+        #state['param_groups'][0].update(point_optim['param_groups'][0])
+        #state['state'].update(point_optim['state'])
+        
+        #self.optimizer.load_state_dict(state)

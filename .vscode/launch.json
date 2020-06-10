@@ -106,5 +106,22 @@
                 "checkpoints/pointuni2/epoch_30.pt",
             ]
         },
+        {
+            "name": "Train point",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "point-train",
+                "--workers",
+                "1",
+                "--load",
+                "checkpoints/pointuni2/epoch_30.pt",
+                "--device",
+                "cpu"
+            ]
+        },
     ]
 }

@@ -15,7 +15,7 @@ class DebuggerPoint():
 
         self.DEVICE = args.device
 
-        self.loader = data.get_coco_loader(args)
+        self.loader = data.get_coco_batch_loader_split(args)["test"]
 
         self.model = SiameseUnsuperPoint().to(self.DEVICE)
 
@@ -39,32 +39,35 @@ class DebuggerPoint():
 
         print(f"loss {loss.item():.3f}")
 
-        prel1 = utils.torch_to_numpy(data["A"]["Prel"][0].transpose(0,1))
-        prel2 = utils.torch_to_numpy(data["B"]["Prel"][0].transpose(0,1))
+        b = 3
+
+        prel1 = utils.torch_to_numpy(data["A"]["Prel"][b].transpose(0,1))
+        prel2 = utils.torch_to_numpy(data["B"]["Prel"][b].transpose(0,1))
 
         prelflat = np.concatenate((prel1.flatten(), prel2.flatten()))
         #prelflat = prel1[:,0]
 
-        img = viz.tensor2img(data["img"][0])
-        warp = viz.tensor2img(data["warp"][0])
+        img = viz.tensor2img(data["img"][b])
+        warp = viz.tensor2img(data["warp"][b])
 
         AF = data["A"]["F"]
         BF = data["B"]["F"]
-        des1 = utils.torch_to_numpy(AF[0].transpose(0,1))
-        des2 = utils.torch_to_numpy(BF[0].transpose(0,1))
+        des1 = utils.torch_to_numpy(AF[b].transpose(0,1))
+        des2 = utils.torch_to_numpy(BF[b].transpose(0,1))
 
-        s1 = utils.torch_to_numpy(data["A"]["S"][0])
-        s2 = utils.torch_to_numpy(data["B"]["S"][0])
+        s1 = utils.torch_to_numpy(data["A"]["S"][b])
+        s2 = utils.torch_to_numpy(data["B"]["S"][b])
 
-        p1 = utils.torch_to_numpy(data["A"]["P"][0].transpose(0,1))
-        p2 = utils.torch_to_numpy(data["B"]["P"][0].transpose(0,1))
+        p1 = utils.torch_to_numpy(data["A"]["P"][b].transpose(0,1))
+        p2 = utils.torch_to_numpy(data["B"]["P"][b].transpose(0,1))
 
         img_matches = []
 
         if True: # match descriptors using pytorch
             ids, mask = brute_force_match(AF, BF)
-            ids = utils.torch_to_numpy(ids[0])
-            mask = utils.torch_to_numpy(mask[0])
+            ids = utils.torch_to_numpy(ids[b])
+            mask = utils.torch_to_numpy(mask[b])
+            print(p1[mask].shape)
             img_matches.append(viz.draw_matches(img, warp, p1[mask], p2[ids][mask]))
             print(ids.shape, mask.sum())
         if True: # cv2 match descriptor
@@ -76,11 +79,11 @@ class DebuggerPoint():
             kp1 = [cv2.KeyPoint(xy[0], xy[1], 2) for xy in p1]
             kp2 = [cv2.KeyPoint(xy[0], xy[1], 2) for xy in p2]
             img_matches.append(cv2.drawMatches(img, kp1, warp, kp2, matches, flags=2, outImg=None))
-        if False: # debug match using ids
-            ids = utils.torch_to_numpy(data["ids"][0])
-            mask = utils.torch_to_numpy(data["mask"][0])
-            APh = utils.torch_to_numpy(data["APh"][0])
-            p1h = utils.torch_to_numpy(data["APh"][0].transpose(0,1))
+        if True: # debug match using ids
+            ids = utils.torch_to_numpy(data["ids"][b])
+            mask = utils.torch_to_numpy(data["mask"][b])
+            APh = utils.torch_to_numpy(data["APh"][b])
+            p1h = utils.torch_to_numpy(data["APh"][b].transpose(0,1))
             img_matches.append(viz.draw_matches(img, warp, p1[ids][mask], p2[mask]))
             #img_matches.append(viz.draw_matches(img, warp, p1, p1h))
         

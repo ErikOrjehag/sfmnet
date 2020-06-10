@@ -20,6 +20,7 @@ from debugger import Debugger as SfMDebugger
 from sfm_tester import SfMTester
 from point_trainer import PointTrainer
 from debugger_point import DebuggerPoint
+from debugger_fcons import DebuggerFcons
 
 def parse_args(extra=[], overwrite={}):
     always = ["net", "workers", "device", "load"]
@@ -44,11 +45,13 @@ def main():
     elif choice == "point-train":
         action = PointTrainer(parse_args(["name", "batch", "train"]))
     elif choice == "point-debug":
-        action = DebuggerPoint(parse_args(["loss"]))
+        action = DebuggerPoint(parse_args(["loss", "batch"]))
 
     # Fundamental consensus
     elif choice == "fcons-train":
         action = FundamentalTrainer(parse_args(["name", "batch", "train"]))
+    elif choice == "fcons-debug":
+        action = DebuggerFcons(parse_args(["loss", "batch"]))
 
     # Ooops..
     else:

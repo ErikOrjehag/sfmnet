@@ -1,5 +1,10 @@
 # sfmnet
 
+## Train ckmmands
+
+
+## Training data junk
+
 du -a | grep velodyne_points/data | cut -d/ -f3 | sort | uniq -c | sort -nr | grep " 1 "
 
 du -a | grep image_03/data | cut -d/ -f3 | sort | uniq -c | sort -nr | grep " 1 "
