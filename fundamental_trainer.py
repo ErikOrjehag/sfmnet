@@ -22,8 +22,16 @@ class FundamentalTrainer(BaseTrainer):
 
     
     def load_checkpoint(self, args):
-        point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
-        self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
+        if args.load_consensus:
+            cons_checkpoint = torch.load(args.load_consensus, map_location=torch.device(args.device))
+            self.model.load_state_dict(cons_checkpoint["model"])
+        elif args.load_point:
+            point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
+            self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
+        else:
+            print("NEED TO LOAD SOME MODEL")
+            exit()
+
     
         #self.optimizer.add_param_group({'params': self.model.siamese_unsuperpoint.parameters() })
         #self.optimizer.load_state_dict(point_checkpoint["optimizer"])

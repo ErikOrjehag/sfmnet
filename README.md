@@ -1,6 +1,15 @@
 # sfmnet
 
-## Train ckmmands
+## Train commands
+
+python main.py fcons-train --log-interval 500 --lr 0.0005 --name fc7 --load-point checkpoints/pointuni2/epoch_30.pt
+
+## Debug commands
+
+python main.py fcons-debug --load checkpoints/fc7/epoch_1.pt
+
+## Test commands
+
 
 
 ## Training data junk

@@ -134,6 +134,7 @@ class FundamentalConsensus(nn.Module):
     def train(self, mode=True):
         super().train(mode)
         if mode:
+            print("F model train mode!!!! #####################3")
             self.siamese_unsuperpoint.eval() # lol
             for param in self.siamese_unsuperpoint.parameters():
                 param.requires_grad = False
@@ -191,18 +192,23 @@ class ConsensusLoss():
         SVD = W@M
         U,S,VT = torch.svd(SVD)
         P = VT.transpose(1,2)[:,:,VT.shape[1]-self.r:]
+        #P = VT[:,:,VT.shape[1]-self.r:]
         data["P"] = P
 
-        lam = 0.01#1e5#0.15
         s = S[:,S.shape[1]-self.r:]
-        lam_r = 0.001
+
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
         reg = Temb @ Temb.transpose(1,2)
-        reg_loss = lam_r * ((reg-I)**2).sum() # PointNet regularization
+        reg_loss = ((reg-I)**2).sum() # PointNet regularization
 
-        loss_cons = -w.mean() + lam * s.sum() + reg_loss# + -0.01*data["mask"].sum() nono
+        lam = 1e5#1e5#0.15
+        lam_r = 1e-1
+        wl = -w.mean()
+        sl = lam * s.mean()
+        rl = lam_r * reg_loss
+        loss_cons = wl + sl + rl # + -0.01*data["mask"].sum() nono
+        print(wl, sl, rl)
 
-        #print(-w.mean(), lam*s.sum(), reg_loss)
         percent = 100.0*(w[0] > 0.9).sum()/w.shape[1]
         print(percent, w.shape[1])
 
@@ -211,7 +217,7 @@ class ConsensusLoss():
 class FundamentalConsensusLoss(ConsensusLoss):
 
     def __init__(self):
-        super().__init__(r=3, d=2)
+        super().__init__(r=1, d=2)
 
     def vandermonde_matrix(self, u, v):
         # u/v --> [B,2,N]
@@ -236,12 +242,16 @@ class FundamentalConsensusLoss(ConsensusLoss):
         B = P.shape[0]
         #F = P.reshape(B,3,3)
         #_,S,_ = torch.svd(F)
-        #lam_f = 0.01
-        #loss_f = lam_f * S[:,2].sum() # Fundamental matrix regularization
+
+        # Fundamental matrix regularization
+        #lam_f = 1e2
+        #fl = lam_f * S[:,2].mean()
+        #loss_f =  lam_f * fl
+        #print(fl)
 
         loss_total = loss_cons# + loss_f
 
-        return 0.01*loss_total, data
+        return loss_total, data
 
 def main():
     data = { "x": torch.randn(4,4,150) }
