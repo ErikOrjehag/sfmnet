@@ -123,5 +123,20 @@
                 "cpu"
             ]
         },
+        {
+            "name": "FCONS Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "fcons-debug",
+                "--workers",
+                "1",
+                "--load",
+                "checkpoints/fc29/epoch_1.pt"
+            ]
+        },
     ]
 }

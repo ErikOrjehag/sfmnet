@@ -1,7 +1,7 @@
 
 import torch
 import data
-from networks.deepconsensus import FundamentalConsensus, FundamentalConsensusLoss
+from networks.deepconsensus import FundamentalConsensus, FundamentalConsensusLoss, HomographyConsensusLoss
 from base_trainer import BaseTrainer
 
 class FundamentalTrainer(BaseTrainer):
@@ -11,7 +11,7 @@ class FundamentalTrainer(BaseTrainer):
             args,
             loaders=data.get_coco_batch_loader_split(args),
             model=FundamentalConsensus(),
-            loss_fn=FundamentalConsensusLoss()
+            loss_fn=HomographyConsensusLoss() #FundamentalConsensusLoss()
         )
 
     #def get_parameter_groups(self):
@@ -22,9 +22,17 @@ class FundamentalTrainer(BaseTrainer):
 
     
     def load_checkpoint(self, args):
-        point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
-        self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
-    
+
+        if args.load_point:
+            point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
+            self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
+        elif args.load_consensus:
+            consensus_checkpoint = torch.load(args.load_consensus, map_location=torch.device(args.device))
+            self.model.load_state_dict(consensus_checkpoint["model"])
+        else:
+            print("NEED TO LOAD MODEL!")
+            exit()
+
         #self.optimizer.add_param_group({'params': self.model.siamese_unsuperpoint.parameters() })
         #self.optimizer.load_state_dict(point_checkpoint["optimizer"])
         #self.optimizer.add_param_group({'params': self.model.pointnet_binseg.parameters() })

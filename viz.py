@@ -30,7 +30,10 @@ def tensor2diffimg(img):
   img = img.cpu().detach().numpy()
   return np.uint8(np.transpose(img, (1, 2, 0))[:,:,::-1] * 255)
 
-def draw_matches(img1, img2, pts1, pts2, inliers=None):
+def draw_text(text, img):
+  return cv2.putText(img, text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1, cv2.LINE_AA)
+
+def draw_matches(img1, img2, pts1, pts2, inliers=None, draw_outliers=True):
   H, W = img1.shape[:2]
   N = pts1.shape[0]
   if inliers is None:
@@ -51,13 +54,19 @@ def draw_matches(img1, img2, pts1, pts2, inliers=None):
     p2 += np.array([W, 0])
     c = pretty_color(i, N)
     img = _draw_match(img, p1, p2, c)
-  for i, p1p2 in enumerate(zip(pts1[outliers], pts2[outliers])):
-    p1, p2 = p1p2
-    p2 += np.array([W, 0])
-    c = (0,0,255)
-    img = _draw_match(img, p1, p2, c, w=2)
 
-  return img.get()
+  if draw_outliers:
+    for i, p1p2 in enumerate(zip(pts1[outliers], pts2[outliers])):
+      p1, p2 = p1p2
+      p2 += np.array([W, 0])
+      c = (0,0,255)
+      img = _draw_match(img, p1, p2, c, w=2)
+
+  try:
+    return img.get()
+  except:
+    return img
+
 
 
 def pretty_color(i, n):

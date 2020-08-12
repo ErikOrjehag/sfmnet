@@ -193,55 +193,83 @@ class ConsensusLoss():
         P = VT.transpose(1,2)[:,:,VT.shape[1]-self.r:]
         data["P"] = P
 
-        lam = 0.01#1e5#0.15
+        lam = 0.003#1e5#0.15
         s = S[:,S.shape[1]-self.r:]
-        lam_r = 0.001
+        lam_r = 0.01
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
         reg = Temb @ Temb.transpose(1,2)
         reg_loss = lam_r * ((reg-I)**2).sum() # PointNet regularization
 
         loss_cons = -w.mean() + lam * s.sum() + reg_loss# + -0.01*data["mask"].sum() nono
 
-        #print(-w.mean(), lam*s.sum(), reg_loss)
+        print(-w.mean(), lam*s.sum(), reg_loss)
         percent = 100.0*(w[0] > 0.9).sum()/w.shape[1]
         print(percent, w.shape[1])
 
         return loss_cons, data
 
+def fundamental_homography_vandermonde_matrix(u, v):
+    # u/v --> [B,2,N]
+    B,_,N = u.shape
+    M = torch.stack([
+        u[:,0,:], 
+        u[:,1,:], 
+        v[:,0,:], 
+        v[:,1,:], 
+        u[:,0,:] * v[:,0,:],
+        u[:,0,:] * v[:,1,:],
+        u[:,1,:] * v[:,0,:],
+        
+        u[:,1,:] * v[:,1,:],
+        torch.ones(B,N,device=u.device),
+
+        #u[:,1,:],
+        #v[:,1,:],
+        
+        
+    ], dim=1).transpose(1,2)
+    return M
+
 class FundamentalConsensusLoss(ConsensusLoss):
 
     def __init__(self):
-        super().__init__(r=3, d=2)
+        super().__init__(r=1, d=2)
 
     def vandermonde_matrix(self, u, v):
-        # u/v --> [B,2,N]
-        B,_,N = u.shape
-        M = torch.stack([
-            u[:,0,:], 
-            u[:,1,:], 
-            v[:,0,:], 
-            v[:,1,:], 
-            u[:,0,:] * v[:,0,:],
-            u[:,0,:] * v[:,1,:],
-            u[:,1,:] * v[:,0,:],
-            u[:,1,:],
-            v[:,1,:],
-            #torch.ones(B,N,device=u.device)
-        ], dim=1).transpose(1,2)
-        return M
+        return fundamental_homography_vandermonde_matrix(u, v)
 
     def __call__(self, data):
         loss_cons, data = super().__call__(data)
         P = data["P"]
         B = P.shape[0]
-        #F = P.reshape(B,3,3)
-        #_,S,_ = torch.svd(F)
-        #lam_f = 0.01
-        #loss_f = lam_f * S[:,2].sum() # Fundamental matrix regularization
+        
+        F = P.reshape(B,3,3)
+        _,S,_ = torch.svd(F)
+        lam_f = 1e1
+        loss_f = lam_f * S[:,2].mean() # Fundamental matrix regularization
+        print(loss_f)
 
-        loss_total = loss_cons# + loss_f
+        loss_total = loss_cons + loss_f
 
         return 0.01*loss_total, data
+
+class HomographyConsensusLoss(ConsensusLoss):
+
+    def __init__(self):
+        super().__init__(r=3, d=2)
+
+    def vandermonde_matrix(self, u, v):
+        return fundamental_homography_vandermonde_matrix(u, v)
+
+    def __call__(self, data):
+        loss_cons, data = super().__call__(data)
+        
+        loss_total = loss_cons
+
+        #return 0.01*loss_total, data
+        return 1.0*loss_total, data
+
+
 
 def main():
     data = { "x": torch.randn(4,4,150) }
