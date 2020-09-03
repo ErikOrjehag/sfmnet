@@ -111,7 +111,7 @@ class PointNetBinSeg(nn.Module):
             block(256, 128),
             block(128, 128),
             nn.Conv1d(128, 1, 1),
-            nn.Sigmoid()
+            #nn.Sigmoid() We do this at a later stage instead
         )
 
     def forward(self, x):
@@ -120,8 +120,8 @@ class PointNetBinSeg(nn.Module):
         global_feature, local_embedding, T = self.base(x) # [B,1024], [B,64,N], [B,64,64]
         global_expand = global_feature.unsqueeze(-1).repeat(1,1,N) # [B,1024,N]
         cat_feat = torch.cat( [ local_embedding, global_expand ], dim=1)
-        w = self.binseg(cat_feat).squeeze(1) # [B,1,N] -> [B,N]
-        return { "x": x, "w": w, "Temb": T }
+        binseg = self.binseg(cat_feat).squeeze(1) # [B,1,N] -> [B,N]
+        return { "x": x, "binseg": binseg, "Temb": T }
 
 class FundamentalConsensus(nn.Module):
 
@@ -183,34 +183,69 @@ class ConsensusLoss():
     def __call__(self, data):
 
         Ap, Bp = data["x"][:,:self.d], data["x"][:,self.d:]
-        w = data["w"]
-        Temb = data["Temb"]
-        
-        W = torch.diag_embed(w)
-        M = self.vandermonde_matrix(Ap, Bp)
-        SVD = W@M
-        U,S,VT = torch.svd(SVD)
-        P = VT.transpose(1,2)[:,:,VT.shape[1]-self.r:]
-        data["P"] = P
 
-        lam = 0.003#1e5#0.15
+        binseg_pred = data["binseg"]
+        Temb = data["Temb"]
+
+        # Soft count inliers
+        inlier_tresh = 0.5
+        #inlier_prob = 1.0 - torch.sigmoid(binseg_pred) # 1 - x
+        #inlier_soft = torch.mean(torch.sigmoid(5*(inlier_prob - inlier_tresh)))
+        inlier_prob = torch.sigmoid(binseg_pred)
+        inlier_soft = torch.mean(inlier_prob)
+        data["inlier_prob"] = inlier_prob
+
+        # Add small random values to produce high vander loss in case of too few inliers
+        weights = inlier_prob# + torch.rand_like(inlier_prob) * 1e-9
+
+        # Normalize weights, sum to 1 across all points
+        #weights = weights / torch.norm(weights, dim=1, keepdim=True)
+        
+        # Multiply weights by vandermonde matrix
+        vandermonde = self.vandermonde_matrix(Ap, Bp)
+        weighted_vandermonde = torch.diag_embed(weights) @ vandermonde
+        data["WM"] = weighted_vandermonde
+        
+        # Extract nullspace from vandermonde matrix
+        U,S,VT = torch.svd(weighted_vandermonde)
+        V = VT.transpose(1,2)
+        basis = V[:,:,V.shape[2]-self.r:]
+        data["basis"] = basis
+
+        # Singular values to be minimized
+        #singular_lam = 1e4#0.003#1e5#0.15
+        singular_lam = 1.0
         s = S[:,S.shape[1]-self.r:]
-        lam_r = 0.01
+        data["S"] = S
+        data["s"] = s
+
+        # PointNet regularization 
+        #reg_lam = 1.0
+        reg_lam = 1e-3
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
         reg = Temb @ Temb.transpose(1,2)
-        reg_loss = lam_r * ((reg-I)**2).sum() # PointNet regularization
+        reg_loss = reg_lam * ((reg-I)**2).sum()
 
-        loss_cons = -w.mean() + lam * s.sum() + reg_loss# + -0.01*data["mask"].sum() nono
+        # inlier lamdba
+        inlier_lam = 10.0
 
-        print(-w.mean(), lam*s.sum(), reg_loss)
-        percent = 100.0*(w[0] > 0.9).sum()/w.shape[1]
-        print(percent, w.shape[1])
+        # Loss terms
+        inlier_loss = -inlier_lam * inlier_soft
+        singular_loss = singular_lam * s.mean()
+
+        # Total loss
+        loss_cons = inlier_loss + singular_loss + reg_loss
+
+        print(inlier_loss, singular_loss, reg_loss)
+        percent = 100.0*(inlier_prob[0] > 0.5).sum()/inlier_prob.shape[1]
+        print(percent, inlier_prob.shape[1])
 
         return loss_cons, data
 
 def fundamental_homography_vandermonde_matrix(u, v):
     # u/v --> [B,2,N]
     B,_,N = u.shape
+    """
     M = torch.stack([
         u[:,0,:], 
         u[:,1,:], 
@@ -228,7 +263,22 @@ def fundamental_homography_vandermonde_matrix(u, v):
         
         
     ], dim=1).transpose(1,2)
+    """
+    M = torch.stack([
+        u[:,0,:] * v[:,0,:], # u_x * v_x
+        u[:,0,:] * v[:,1,:], # u_x * v_y
+        u[:,0,:],            # u_x
+        u[:,1,:] * v[:,0,:], # u_y * v_x
+        u[:,1,:] * v[:,1,:], # u_y * v_y
+        u[:,1,:],            # u_y
+        v[:,0,:],            # v_x
+        v[:,1,:],            # v_y
+        torch.ones(B,N,device=u.device), # 1
+    ], dim=1).transpose(1,2)
+    # Normalize
+    #M = (M/torch.norm(M, dim=2, keepdim=True).expand(-1,-1,9))
     return M
+
 
 class FundamentalConsensusLoss(ConsensusLoss):
 
@@ -240,14 +290,14 @@ class FundamentalConsensusLoss(ConsensusLoss):
 
     def __call__(self, data):
         loss_cons, data = super().__call__(data)
-        P = data["P"]
-        B = P.shape[0]
+        basis = data["basis"]
+        B = basis.shape[0]
         
-        F = P.reshape(B,3,3)
+        F = basis.reshape(B,3,3)
         _,S,_ = torch.svd(F)
         lam_f = 1e1
         loss_f = lam_f * S[:,2].mean() # Fundamental matrix regularization
-        print(loss_f)
+        #print(loss_f)
 
         loss_total = loss_cons + loss_f
 
@@ -265,6 +315,62 @@ class HomographyConsensusLoss(ConsensusLoss):
         loss_cons, data = super().__call__(data)
         
         loss_total = loss_cons
+
+        # # # # # # # # # # # # # # # #
+        # Construct homography matrix #
+        # # # # # # # # # # # # # # # #
+        basis = data["basis"] # nullspace vectors 9x3
+        # target basis:
+        #      0 x x
+        #      0 x x
+        #      0 x x
+        #------------------
+        #      x 0 x
+        #      x 0 x
+        #      x 0 x
+        #------------------
+        #      x x x
+        #      x x x
+        #      x x x
+        A1 = basis[:,0:3,:]
+        A2 = basis[:,3:6,:]
+
+        n1 = torch.svd(A1)[2].transpose(1, 2)[:,:,-1] # nullspace of A1
+        n2 = torch.svd(A2)[2].transpose(1, 2)[:,:,-1] # nullspace of A2
+        
+        # Change of basis using nullspace of A1 and A2
+        # will introduce zeroes like in the target basis
+        x1 = (basis @ n1.unsqueeze(2)).squeeze(2)
+        x2 = (basis @ n2.unsqueeze(2)).squeeze(2)
+        
+        # Scale equations such that h3 from x1 aligns with h3 from x2
+        x1s = x1 / torch.norm(x1[:,3:6], dim=1, keepdim=True)
+        x2s = x2 / torch.norm(x2[:,0:3], dim=1, keepdim=True)
+        
+        # Correct for sign (will be -1 if different, 1 if the same)
+        different_signs = torch.sign(torch.sum(x2s[:,0:3], dim=1)) * torch.sign(torch.sum(x1s[:,3:6], dim=1))
+        x2s = x2s * different_signs.unsqueeze(1)
+
+        # Assemble homography
+        h11 = x2s[:,6]
+        h12 = x2s[:,7]
+        h13 = x2s[:,8]
+
+        h21 = x1s[:,6]
+        h22 = x1s[:,7]
+        h23 = x1s[:,8]
+
+        h31 = -x1s[:,3]
+        h32 = -x1s[:,4]
+        h33 = -x1s[:,5]
+
+        h1 = torch.stack((h11, h12, h13), dim=1)
+        h2 = torch.stack((h21, h22, h23), dim=1)
+        h3 = torch.stack((h31, h32, h33), dim=1)
+        HH = torch.stack((h1, h2, h3), dim=1)
+        H = HH / torch.norm(HH, dim=(1,2), keepdim=True)
+
+        data["H_pred"] = H
 
         #return 0.01*loss_total, data
         return 1.0*loss_total, data

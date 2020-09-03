@@ -34,7 +34,8 @@ class HomoAdapDataset(data.Dataset):
         return img
 
     def __getitem__(self, index):
-        img = imread(self.images[index])
+        filename = self.images[index]
+        img = imread(filename)
         if len(img.shape) == 2:
             img = np.stack((img,)*3, axis=-1)
         img = self.scale_crop(img)
@@ -46,9 +47,9 @@ class HomoAdapDataset(data.Dataset):
         data = { 
             "img": img,
             "warp": warp,
-            "homography": h
+            "homography": h,
         }
         if img.shape[1] != 128 or img.shape[2] != 416:
             print(img.shape)
-            print(self.images[index])
+            print(filename)
         return data

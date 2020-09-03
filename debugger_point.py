@@ -77,7 +77,6 @@ class DebuggerPointBase(DebuggerBase):
             self.p2 = utils.torch_to_numpy(data["B"]["P"][self.b].transpose(0,1))
 
             self.img_matches = []
-            self.inliers = []
 
             if True: # cv2 match descriptor
                 bf = cv2.BFMatcher.create(cv2.NORM_L2, crossCheck=True)
@@ -90,6 +89,8 @@ class DebuggerPointBase(DebuggerBase):
                 self.img_matches.append(viz.draw_text("CV2 BFMatcher", cv2.drawMatches(self.img, kp1, self.warp, kp2, matches, flags=2, outImg=None)))
 
             self._compute_debug(loss, data)
+
+            inlier_prob = utils.torch_to_numpy(data["inlier_prob"])[self.b]
 
             self.img_matches = np.concatenate([img for img in self.img_matches])
 
@@ -114,8 +115,8 @@ class DebuggerPointBase(DebuggerBase):
                 
                 cv2.imshow("matches", self.img_matches)
 
-                plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
-                #plt.hist(inliers, 10, (0.,1.), color=(0,0,1))
+                #plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
+                plt.hist(inlier_prob, 10, (0.,1.), color=(0,0,1))
                 
                 fig.canvas.flush_events()
 

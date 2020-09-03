@@ -7,7 +7,12 @@ def iterate_loader(device, loader, fn, start=0, end=None, args=[]):
         if end is not None and step >= end:
             break
         inputs = dict_to_device(inputs, device)
-        fn(step, inputs, *args)
+        try:
+            fn(step, inputs, *args)
+        except:
+            print("# # # # # # # # # # # # # # # #")
+            print("# GOT EXCEPTION IN TRAIN STEP #")
+            print("# # # # # # # # # # # # # # # #")
 
 def forward_pass(model, loss_fn, inputs):
     outputs = model(inputs)

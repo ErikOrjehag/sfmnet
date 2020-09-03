@@ -16,6 +16,7 @@ import options
 import sys
 from sfm_trainer import SfMTrainer
 from fundamental_trainer import FundamentalTrainer
+from homography_trainer import HomographyTrainer
 from debugger import Debugger as SfMDebugger
 from sfm_tester import SfMTester
 from point_trainer import PointTrainer
@@ -52,6 +53,10 @@ def main():
         action = FundamentalTrainer(parse_args(["name", "batch", "train"]))
     elif choice == "fcons-debug":
         action = DebuggerFcons(parse_args(["loss", "batch"]))
+
+    # Homography concensus
+    elif choice == "homog-train":
+        action = HomographyTrainer(parse_args(["name", "batch", "train"]))
 
     # Ooops..
     else:
