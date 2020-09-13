@@ -4,7 +4,7 @@ from reconstruction import reconstruct_image
 import utils
 
 def get_loss_fn(args):
-    return SfmLoss(
+    return SFMLoss(
         weights={
             "photo": 1.0, 
             "smooth": args.smooth_weight, 
@@ -17,7 +17,7 @@ def get_loss_fn(args):
         use_stationary_mask=args.stationary_mask,
         use_min=args.min_loss)
 
-class SfmLoss():
+class SFMLoss():
 
     def __init__(self, 
         weights, 

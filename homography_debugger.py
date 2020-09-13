@@ -9,7 +9,7 @@ from networks.deepconsensus import FundamentalConsensus, FundamentalConsensusLos
 from matplotlib import pyplot as plt
 from debugger_point import DebuggerPointBase
 
-class DebuggerFcons(DebuggerPointBase):
+class HomographyDebugger(DebuggerPointBase):
 
     def __init__(self, args):
         super().__init__(args)
@@ -17,7 +17,7 @@ class DebuggerFcons(DebuggerPointBase):
     def _setup_model_and_loss(self):
         return (
             FundamentalConsensus().to(self.DEVICE), 
-            HomographyConsensusLoss() 
+            HomographyConsensusLoss()
         )
 
     def _compute_debug(self, loss, data):

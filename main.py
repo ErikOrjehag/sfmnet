@@ -14,13 +14,17 @@ from pathlib import Path
 import os
 import options
 import sys
-from sfm_trainer import SfMTrainer
-from fundamental_trainer import FundamentalTrainer
-from debugger import Debugger as SfMDebugger
-from sfm_tester import SfMTester
+
+
+from sfm_trainer import SFMTrainer
+from sfm_debugger import SFMDebugger
+from sfm_tester import SFMTester
+
 from point_trainer import PointTrainer
-from debugger_point import DebuggerPoint
-from debugger_fcons import DebuggerFcons
+from point_debugger import PointDebugger
+
+from homography_trainer import HomographyTrainer
+from homography_debugger import HomographyDebugger
 
 def parse_args(extra=[], overwrite={}):
     always = ["net", "workers", "device", "load"]
@@ -44,14 +48,14 @@ def main():
     # Unsuperpoint
     elif choice == "point-train":
         action = PointTrainer(parse_args(["name", "batch", "train"]))
-    elif choice == "point-debug":
-        action = DebuggerPoint(parse_args(["loss", "batch"]))
+    elif choice == "point-debg":
+        action = PointDebugger(parse_args(["loss", "batch"]))
 
-    # Fundamental consensus
+    # Homography consensus
     elif choice == "fcons-train":
-        action = FundamentalTrainer(parse_args(["name", "batch", "train"]))
+        action = HomographyTrainer(parse_args(["name", "batch", "train"]))
     elif choice == "fcons-debug":
-        action = DebuggerFcons(parse_args(["loss", "batch"]))
+        action = HomographyDebugger(parse_args(["loss", "batch"]))
 
     # Ooops..
     else:

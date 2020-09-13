@@ -1,17 +1,17 @@
 
 import torch
 import data
-from networks.deepconsensus import FundamentalConsensus, FundamentalConsensusLoss, HomographyConsensusLoss
+from networks.deepconsensus import FundamentalConsensus, HomographyConsensusLoss
 from base_trainer import BaseTrainer
 
-class FundamentalTrainer(BaseTrainer):
+class HomographyTrainer(BaseTrainer):
 
     def __init__(self, args):
         super().__init__(
             args,
             loaders=data.get_coco_batch_loader_split(args),
             model=FundamentalConsensus(),
-            loss_fn=HomographyConsensusLoss() #FundamentalConsensusLoss()
+            loss_fn=HomographyConsensusLoss()
         )
 
     #def get_parameter_groups(self):

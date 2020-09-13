@@ -19,7 +19,7 @@ def to_points_3d(img, depth, K, remove=1.0):
     colors = img[:,mask].view(3,-1).transpose(1,0).cpu().detach().numpy().astype(np.float64)
     return points, colors
 
-class Debugger():
+class SFMDebugger():
 
     def __init__(self, args):
         super().__init__()

@@ -121,7 +121,7 @@ class DebuggerPointBase(DebuggerBase):
 
 
 
-class DebuggerPoint(DebuggerPointBase):
+class PointDebugger(DebuggerPointBase):
 
     def __init__(self, args):
         super().__init__(args)
