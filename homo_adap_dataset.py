@@ -16,6 +16,19 @@ class HomoAdapDataset(data.Dataset):
 
         self.images = sorted(glob.glob(os.path.join(root, "*.jpg")))
 
+        #self.K = torch.tensor([
+        #    [2.416744631239935472e+02, 0.000000000000000000e+00, 2.041680103059581199e+02],
+        #    [0.000000000000000000e+00, 2.462848682666666491e+02, 5.900083200000000261e+01],
+        #    [0.000000000000000000e+00, 0.000000000000000000e+00, 1.000000000000000000e+00],
+        #])
+        self.K = torch.tensor([
+            [208.0,   0.0, 208.0],
+            [  0.0, 208.0,  64.0],
+            [  0.0,   0.0,   1.0],
+        ])
+
+        self.Kinv = self.K.inverse()
+
     def __len__(self):
         return len(self.images)
 
@@ -46,7 +59,9 @@ class HomoAdapDataset(data.Dataset):
         data = { 
             "img": img,
             "warp": warp,
-            "homography": h
+            "homography": h,
+            "K": self.K,
+            "Kinv": self.Kinv
         }
         if img.shape[1] != 128 or img.shape[2] != 416:
             print(img.shape)

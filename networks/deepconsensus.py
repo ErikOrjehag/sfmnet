@@ -188,6 +188,10 @@ class ConsensusLoss():
         
         W = torch.diag_embed(w)
         M = self.vandermonde_matrix(Ap, Bp)
+        
+        data["w"] = w
+        data["M"] = M
+
         SVD = W@M
         U,S,VT = torch.svd(SVD)
         P = VT.transpose(1,2)[:,:,VT.shape[1]-self.r:]
@@ -264,7 +268,97 @@ class HomographyConsensusLoss(ConsensusLoss):
     def __call__(self, data):
         loss_cons, data = super().__call__(data)
         
+        
         loss_total = loss_cons
+
+        # # # # # # # # # # # # # # # #
+        # Construct homography matrix #
+        # # # # # # # # # # # # # # # #
+        w = data["w"]
+        M = data["M"]
+
+        M = (M/torch.norm(M, dim=2, keepdim=True).expand(-1,-1,9))
+
+        ww = torch.sigmoid(50 * (w - 0.5))
+        W = torch.diag_embed(ww)
+
+
+        WM = W@M
+
+        WM2 = torch.stack((
+            WM[:,:,4],
+            WM[:,:,5],
+            WM[:,:,0],
+            WM[:,:,6],
+            WM[:,:,7],
+            WM[:,:,1],
+            WM[:,:,2],
+            WM[:,:,3],
+            WM[:,:,8],
+        ), dim=2)
+        
+        #U,S,VT = torch.svd(WM2)
+        #basis = VT.transpose(1,2)[:,:,VT.shape[1]-self.r:]
+        U,S,V = torch.svd(WM2)
+        basis = V[:,:,V.shape[2]-self.r:]
+
+        #basis = data["P"] # nullspace vectors 9x3
+        
+        
+        # target basis:
+        #      0 x x
+        #      0 x x
+        #      0 x x
+        #------------------
+        #      x 0 x
+        #      x 0 x
+        #      x 0 x
+        #------------------
+        #      x x x
+        #      x x x
+        #      x x x
+        A1 = basis[:,0:3,:]
+        A2 = basis[:,3:6,:]
+
+        #n1 = torch.svd(A1)[2].transpose(1, 2)[:,:,-1] # nullspace of A1
+        #n2 = torch.svd(A2)[2].transpose(1, 2)[:,:,-1] # nullspace of A2
+        
+        n1 = torch.svd(A1)[2][:,:,-1] # nullspace of A1
+        n2 = torch.svd(A2)[2][:,:,-1] # nullspace of A2
+        
+        # Change of basis using nullspace of A1 and A2
+        # will introduce zeroes like in the target basis
+        x1 = (basis @ n1.unsqueeze(2)).squeeze(2)
+        x2 = (basis @ n2.unsqueeze(2)).squeeze(2)
+        
+        # Scale equations such that h3 from x1 aligns with h3 from x2
+        x1s = x1 / torch.norm(x1[:,3:6], dim=1, keepdim=True)
+        x2s = x2 / torch.norm(x2[:,0:3], dim=1, keepdim=True)
+        
+        # Correct for sign (will be -1 if different, 1 if the same)
+        different_signs = torch.sign(torch.sum(x2s[:,0:3], dim=1)) * torch.sign(torch.sum(x1s[:,3:6], dim=1))
+        x2s = x2s * different_signs.unsqueeze(1)
+
+        # Assemble homography
+        h11 = x2s[:,6]
+        h12 = x2s[:,7]
+        h13 = x2s[:,8]
+
+        h21 = x1s[:,6]
+        h22 = x1s[:,7]
+        h23 = x1s[:,8]
+
+        h31 = -x1s[:,3]
+        h32 = -x1s[:,4]
+        h33 = -x1s[:,5]
+
+        h1 = torch.stack((h11, h12, h13), dim=1)
+        h2 = torch.stack((h21, h22, h23), dim=1)
+        h3 = torch.stack((h31, h32, h33), dim=1)
+        HH = torch.stack((h1, h2, h3), dim=1)
+        H = HH / torch.norm(HH, dim=(1,2), keepdim=True)
+
+        data["H_pred"] = H
 
         #return 0.01*loss_total, data
         return 1.0*loss_total, data

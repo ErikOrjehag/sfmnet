@@ -135,7 +135,7 @@
                 "--workers",
                 "1",
                 "--load",
-                "checkpoints/fc29/epoch_1.pt"
+                "checkpoints/h2/epoch_30.pt"
             ]
         },
     ]
