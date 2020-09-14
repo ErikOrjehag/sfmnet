@@ -39,23 +39,23 @@ def main():
 
     # Depth
     if choice == "sfm-train":
-        action = SfMTrainer(parse_args(["name", "batch", "train", "loss", "dataset"]))
+        action = SFMTrainer(parse_args(["name", "batch", "train", "loss", "dataset"]))
     elif choice == "sfm-debug":
-        action = SfMDebugger(parse_args(["loss", "dataset"]))
+        action = SFMDebugger(parse_args(["loss", "dataset"]))
     elif choice == "sfm-test":
-        action = SfMTester(parse_args(["dataset", "loss"], overwrite={"batch": 1}))
+        action = SFMTester(parse_args(["dataset", "loss"], overwrite={"batch": 1}))
 
     # Unsuperpoint
     elif choice == "point-train":
-        action = PointTrainer(parse_args(["name", "batch", "train"]))
-    elif choice == "point-debg":
-        action = PointDebugger(parse_args(["loss", "batch"]))
+        action = PointTrainer(parse_args(["name", "batch", "train", "dataset"]))
+    elif choice == "point-debug":
+        action = PointDebugger(parse_args(["loss", "batch", "dataset"]))
 
     # Homography consensus
     elif choice == "fcons-train":
-        action = HomographyTrainer(parse_args(["name", "batch", "train"]))
+        action = HomographyTrainer(parse_args(["name", "batch", "train", "dataset"]))
     elif choice == "fcons-debug":
-        action = HomographyDebugger(parse_args(["loss", "batch"]))
+        action = HomographyDebugger(parse_args(["loss", "batch", "dataset"]))
 
     # Ooops..
     else:

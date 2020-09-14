@@ -1,11 +1,12 @@
 
+import random
 import sys
 import cv2
 import torch
 from kitti import Kitti
 from lyft import Lyft
 from synthia import Synthia
-from homo_adap_dataset import HomoAdapDataset
+from homo_adap_dataset import HomoAdapDataset, HomoAdapDatasetFromSequences, HomoAdapDatasetCocoKittiLyft
 import viz
 import numpy as np
 import utils
@@ -54,8 +55,14 @@ def main():
     elif choise == "synthia":
         dataset = Synthia(path)
         inspector = sfm_inspector
-    elif choise == "homo":
+    elif choise == "cocoa_homo_adapt":
         dataset = HomoAdapDataset(path)
+        inspector = simple_inspector
+    elif choise == "sequence_homo_adapt":
+        dataset = HomoAdapDatasetFromSequences(path)
+        inspector = simple_inspector
+    elif choise == "cocokittylyft_homo_adapt":
+        dataset = HomoAdapDatasetCocoKittiLyft(path)
         inspector = simple_inspector
     else:
         print("No such choise: %s" % choise)
@@ -63,11 +70,16 @@ def main():
 
     print(len(dataset))
 
-    for i, data in enumerate(dataset, start=0):
+    #for i, data in enumerate(dataset, start=0):
 
-        print(data["T"])
+    l = list(range(len(dataset)))
+    ids = random.sample(l, len(l))
+
+    for i in ids:
 
         print(i)
+
+        data = dataset[i]
 
         loop = True
         while loop:

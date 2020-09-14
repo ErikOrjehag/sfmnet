@@ -1,7 +1,7 @@
 
 import torch
 import data
-from networks.deepconsensus import FundamentalConsensus, HomographyConsensusLoss
+from networks.deepconsensus import RTConsensus, RTConsensusLoss
 from base_trainer import BaseTrainer
 
 class HomographyTrainer(BaseTrainer):
@@ -9,9 +9,9 @@ class HomographyTrainer(BaseTrainer):
     def __init__(self, args):
         super().__init__(
             args,
-            loaders=data.get_batch_loader_split(args),
-            model=FundamentalConsensus(),
-            loss_fn=HomographyConsensusLoss()
+            loaders=data.get_kitti_batch_loader_split(args),
+            model=RTConsensus(),
+            loss_fn=RTConsensusLoss()
         )
 
     #def get_parameter_groups(self):

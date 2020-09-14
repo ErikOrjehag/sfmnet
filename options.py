@@ -13,7 +13,10 @@ def get_args(description, options, overwrite):
   if "device" in options:
     parser.add_argument("--device", default="cuda", type=str, help="The device to run on cpu/cuda.")
   if "dataset" in options:
-    parser.add_argument("--dataset", default="kitti", type=str, choices=["kitti", "lyft", "lyft_kittistyle", "synthia"], help="Which dataset (kitti/lyft/lyft_kittistyle/synthia).")
+    parser.add_argument("--dataset", default="kitti", type=str, choices=[
+      "kitti", "lyft", "lyft_kittistyle", "synthia", 
+      "coco_homo_adapt", "kitti_homo_adapt", "lyft_homo_adapt", "cocokittylyft_homo_adapt",
+      ], help="Which dataset?")
   
   if "load" in options:
     parser.add_argument("--load", default="", type=str, help="Load state file for full model.")

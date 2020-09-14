@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 from networks.deepconsensus import FundamentalConsensus, FundamentalConsensusLoss, HomographyConsensusLoss
 from matplotlib import pyplot as plt
-from debugger_point import DebuggerPointBase
+from point_debugger import DebuggerPointBase
 
 class HomographyDebugger(DebuggerPointBase):
 

@@ -13,7 +13,7 @@ class DebuggerBase():
 
         self.DEVICE = args.device
 
-        self.loader = data.get_coco_batch_loader_split(args)["test"]
+        self.loader = data.get_batch_loader_split(args)["test"]
 
         self.model, self.loss_fn = self._setup_model_and_loss()
 

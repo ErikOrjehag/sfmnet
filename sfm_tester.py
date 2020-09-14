@@ -12,7 +12,7 @@ import evaluation
 def no_loss(data):
     return torch.tensor(0.0), {}
 
-class SfMTester():
+class SFMTester():
 
     def __init__(self, args):
         super().__init__()

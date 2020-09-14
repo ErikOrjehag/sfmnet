@@ -5,7 +5,7 @@ import networks.architectures
 import evaluation
 from base_trainer import BaseTrainer
 
-class SfMTrainer(BaseTrainer):
+class SFMTrainer(BaseTrainer):
 
     def __init__(self, args):
         super().__init__(

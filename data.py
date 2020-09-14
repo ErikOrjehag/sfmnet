@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from kitti import Kitti
 from lyft import Lyft
-from homo_adap_dataset import HomoAdapDataset
+from homo_adap_dataset import HomoAdapDataset, HomoAdapDatasetCocoKittiLyft, HomoAdapDatasetFromSequences
 import itertools
 
 kitti_path = "/home/ai/Code/Data/kitti2"
@@ -41,10 +41,10 @@ def _data_loaders(dataset, train, val, test, batch_size, workers):
         test_set, batch_size=batch_size, shuffle=False,
         num_workers=workers, pin_memory=True, drop_last=True)
 
-    #print(f"Dataset: {len(dataset)}")
-    #print(f"Train: {len(train_set)} / {len(train_loader) * batch_size}")
-    #print(f"Val: {len(val_set)} / {len(val_loader) * batch_size}")
-    #print(f"Test: {len(test_set)} / {len(test_loader) * batch_size}")
+    print(f"Dataset: {len(dataset)}")
+    print(f"Train: {len(train_set)} / {len(train_loader) * batch_size}")
+    print(f"Val: {len(val_set)} / {len(val_loader) * batch_size}")
+    print(f"Test: {len(test_set)} / {len(test_loader) * batch_size}")
     
     return { "train": train_loader, "val": val_loader, "test": test_loader }
 
@@ -77,6 +77,14 @@ def get_batch_loader_split(args):
         return _get_batch_sequence_loader_split(Lyft, lyft_path, args.batch, args.workers)
     elif args.dataset == "lyft_kittistyle":
         return _get_batch_sequence_loader_split(Kitti, lyft_kittistyle_path, args.batch, args.workers)
+    elif args.dataset == "coco_homo_adapt":
+        return _get_batch_loader_split(HomoAdapDataset, coco_path, args.batch, args.workers)
+    elif args.dataset == "cocokittylyft_homo_adapt":
+        return _get_batch_loader_split(HomoAdapDatasetCocoKittiLyft, coco_path, args.batch, args.workers)
+    elif args.dataset == "kitti_homo_adapt":
+        return _get_batch_loader_split(HomoAdapDatasetFromSequences, kitti_path, args.batch, args.workers)
+    elif args.dataset == "lyft_homo_adapt":
+        return _get_batch_loader_split(HomoAdapDatasetFromSequences, lyft_path, args.batch, args.workers)
     else:
         print("No dataset named: %s" % args.dataset)
         exit()
@@ -88,12 +96,14 @@ def get_loader(args):
         return _get_loader(Lyft, lyft_path, args.workers)
     elif args.dataset == "lyft_kittistyle":
         return _get_loader(Kitti, lyft_kittistyle_path, args.workers)
+    elif args.dataset == "coco_homo_adapt":
+        return _get_loader(HomoAdapDataset, coco_path, args.workers)
+    elif args.dataset == "cocokittylyft_homo_adapt":
+        return _get_loader(HomoAdapDatasetCocoKittiLyft, coco_path, args.workers)
+    elif args.dataset == "kitti_homo_adapt":
+        return _get_loader(HomoAdapDatasetFromSequences, kitti_path, args.workers)
+    elif args.dataset == "lyft_homo_adapt":
+        return _get_loader(HomoAdapDatasetFromSequences, lyft_path, args.workers)
     else:
         print("No dataset named: %s" % args.dataset)
         exit()
-
-def get_coco_batch_loader_split(args):
-    return _get_batch_loader_split(HomoAdapDataset, coco_path, args.batch, args.workers)
-
-def get_coco_loader(args):
-    return _get_loader(HomoAdapDataset, coco_path, args.workers)

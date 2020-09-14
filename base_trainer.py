@@ -139,7 +139,8 @@ class BaseTrainer():
 
     # This can be overridden in child classes
     def load_checkpoint(self, args):
-        checkpoint = torch.load(args.load, map_location=torch.device(args.device))
-        self.model.load_state_dict(checkpoint["model"])
-        self.optimizer.load_state_dict(checkpoint["optimizer"])
-        #self.EPOCH_START = checkpoint["epoch"]
+        if args.load:
+            checkpoint = torch.load(args.load, map_location=torch.device(args.device))
+            self.model.load_state_dict(checkpoint["model"])
+            self.optimizer.load_state_dict(checkpoint["optimizer"])
+            #self.EPOCH_START = checkpoint["epoch"]

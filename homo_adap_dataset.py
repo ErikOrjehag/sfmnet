@@ -52,3 +52,30 @@ class HomoAdapDataset(data.Dataset):
             print(img.shape)
             print(self.images[index])
         return data
+
+class HomoAdapDatasetFromSequences(HomoAdapDataset):
+
+    def __init__(self, root):
+
+        sequences = sorted(glob.glob(os.path.join(root, "*", "")))
+
+        self.images = []
+        
+        for sequence in sequences:
+            self.images += sorted(glob.glob(os.path.join(sequence, "*.jpg")))
+
+class HomoAdapDatasetCocoKittiLyft(HomoAdapDataset):
+
+    def __init__(self, root):
+
+        # Coco
+        self.images = sorted(glob.glob(os.path.join("/home/ai/Code/Data/coco/unlabeled2017/", "*.jpg")))
+
+        # Kitti
+        sequences = sorted(glob.glob(os.path.join("/home/ai/Code/Data/kitti2", "*", "")))
+
+        # Lyft
+        sequences += sorted(glob.glob(os.path.join("/home/ai/Code/Data/lyft/v1.02-train/", "*", "")))
+
+        for sequence in sequences:
+            self.images += sorted(glob.glob(os.path.join(sequence, "*.jpg")))

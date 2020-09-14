@@ -6,7 +6,7 @@ sys.path.insert(0, "/home/ai/Code/sfmnet")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from networks.unsuperpoint import brute_force_match, SiameseUnsuperPoint
+from networks.unsuperpoint import brute_force_match, SiameseUnsuperPoint, SequenceUnsuperPoint
 
 def block(in_channels, out_channels):
     return nn.Sequential(
@@ -171,11 +171,14 @@ class FundamentalConsensus(nn.Module):
 
         return data
 
+
+
 class ConsensusLoss():
 
-    def __init__(self, r, d):
+    def __init__(self, r, d, compute_basis=True):
         self.r = r
         self.d = d
+        self.compute_basis = compute_basis
 
     def vandermonde_matrix(self, u, v):
         pass
@@ -193,9 +196,11 @@ class ConsensusLoss():
         data["M"] = M
 
         SVD = W@M
-        U,S,VT = torch.svd(SVD)
-        P = VT.transpose(1,2)[:,:,VT.shape[1]-self.r:]
-        data["P"] = P
+        U,S,V = torch.svd(SVD, compute_uv=self.compute_basis)
+
+        if self.compute_basis:
+            P = V[:,:,V.shape[2]-self.r:]
+            data["P"] = P
 
         lam = 0.003#1e5#0.15
         s = S[:,S.shape[1]-self.r:]
@@ -362,6 +367,62 @@ class HomographyConsensusLoss(ConsensusLoss):
 
         #return 0.01*loss_total, data
         return 1.0*loss_total, data
+
+class RTConsensus(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+        self.sequence_unsuperpoint = SequenceUnsuperPoint()
+        self.pointnet_binseg = PointNetBinSeg(K=4)
+
+    def train(self, mode=True):
+        super().train(mode)
+        if mode:
+            self.sequence_unsuperpoint.eval() # lol
+            for param in self.sequence_unsuperpoint.parameters():
+                param.requires_grad = False
+
+    def forward(self, data):
+        data = { **data, **self.sequence_unsuperpoint(data) }
+        
+        tgtP = data["points_tgt"]["P"] # [B,2,N]
+        tgtF = data["points_tgt"]["F"] # [B,256,N]
+        
+        ref0 = data["points_ref"]["P"]
+        ref0 = data["points_ref"]["F"]
+        
+        B,_,N = tgtP.shape
+
+        ids, mask = brute_force_match(AF, BF) # [B,N], [B,N]
+        Ap = batch_mask_lookup(AP, mask) # [[2,n] * B]
+        Bp = batch_mask_lookup(batch_ids_lookup(BP, ids), mask) # [[2,n] * B]
+
+        # temp
+        data["Ap"] = Ap
+        data["Bp"] = Bp
+
+        L = torch.min(mask.sum(dim=1))
+
+        x = torch.stack([ torch.cat([Ap[b], Bp[b]], dim=0)[:,torch.randperm(Ap[b].shape[1],device=Ap[b].device)][:,:L] for b in range(B) ], dim=0)
+
+        data = { **data, **self.pointnet_binseg(x) }
+
+        """
+        X = [torch.cat([Ap[b], Bp[b]], dim=0).unsqueeze(0) for b in range(B)] # [[1,K=4,n] * B]
+
+        data = { **data,
+            "pointnet": [self.pointnet_binseg(X[b]) for b in range(B)] # [{"x", "w", "Temb"} * B]
+        }
+        """
+
+        return data
+
+class RTConsensusLoss(ConsensusLoss):
+
+    def __init__(self):
+        super().__init__(r=3, d=3)
+
 
 
 

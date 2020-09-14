@@ -164,6 +164,23 @@ class SiameseUnsuperPoint(nn.Module):
         }
         return outputs
 
+class SequenceUnsuperPoint(nn.Module):
+
+    def __init__(self, N=200):
+        super().__init__()
+        self.unsuperpoint = UnsuperPoint(N=N)
+
+    def forward(self, data):
+        points_tgt = self.unsuperpoint(data["tgt"])
+        points_refs = []
+        for ref in data["refs"]:
+            points_refs.append(self.unsuperpoint(ref))
+        outputs = {
+            "points_tgt": points_tgt,
+            "points_refs": points_refs,
+        }
+        return outputs
+
 class UnsuperLoss():
 
     def __init__(self):
@@ -203,7 +220,7 @@ class UnsuperLoss():
         # Create a mask for only the maped ids that are closer than a threshold.
         mask = Dmin.le(4)
 
-        print(mask[0].sum(), mask[1].sum(), mask[2].sum(), mask[3].sum())
+        #print(mask[0].sum(), mask[1].sum(), mask[2].sum(), mask[3].sum())
 
         d = Dmin[mask]
         dmean = d.mean()
