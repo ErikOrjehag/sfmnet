@@ -155,9 +155,9 @@ class SiameseUnsuperPoint(nn.Module):
         super().__init__()
         self.unsuperpoint = UnsuperPoint(N=N)
 
-    def forward(self, data):
-        A = self.unsuperpoint(data["img"])
-        B = self.unsuperpoint(data["warp"])
+    def forward(self, imgA, imgB):
+        A = self.unsuperpoint(imgA)
+        B = self.unsuperpoint(imgB)
         outputs = {
             "A": A,
             "B": B

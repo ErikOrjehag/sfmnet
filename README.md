@@ -2,6 +2,7 @@
 
 ## Train
 python main.py point-train --log-interval 100 --lr 0.001 --name pointuni2
+python main.py point-train --log-interval 100 --lr 0.0001 --dataset cocokittylyft_homo_adapt --name point_all2
 
 python main.py fcons-train --log-interval 500 --lr 0.0005 --name fc29 --load-point checkpoints/pointuni2/epoch_30.pt
 python main.py fcons-train --log-interval 500 --lr 0.0001 --name fc30 --load-point checkpoints/pointuni2/epoch_30.pt

@@ -5,7 +5,7 @@ import utils
 import viz
 import numpy as np
 import cv2
-from networks.deepconsensus import FundamentalConsensus, FundamentalConsensusLoss, HomographyConsensusLoss
+from networks.deepconsensus import HomographyConsensus, HomographyConsensusLoss
 from matplotlib import pyplot as plt
 from point_debugger import DebuggerPointBase
 
@@ -16,8 +16,8 @@ class HomographyDebugger(DebuggerPointBase):
 
     def _setup_model_and_loss(self):
         return (
-            FundamentalConsensus().to(self.DEVICE), 
-            HomographyConsensusLoss()
+            HomographyConsensus().to(self.DEVICE), 
+            HomographyConsensusLoss(pred=True)
         )
 
     def _compute_debug(self, loss, data):

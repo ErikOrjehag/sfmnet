@@ -52,9 +52,9 @@ def main():
         action = PointDebugger(parse_args(["loss", "batch", "dataset"]))
 
     # Homography consensus
-    elif choice == "fcons-train":
+    elif choice == "homo-train":
         action = HomographyTrainer(parse_args(["name", "batch", "train", "dataset"]))
-    elif choice == "fcons-debug":
+    elif choice == "homo-debug":
         action = HomographyDebugger(parse_args(["loss", "batch", "dataset"]))
 
     # Ooops..
