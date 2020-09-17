@@ -200,32 +200,36 @@ class ConsensusLoss():
         Ap, Bp = data["x"][:,:self.d], data["x"][:,self.d:]
         w = data["w"]
         Temb = data["Temb"]
-        
+
+        #ww = torch.sigmoid(10 * (w - 0.5))
+
         W = torch.diag_embed(w)
         M = self.vandermonde_matrix(Ap, Bp)
         
         data["w"] = w
-        data["M"] = M
+        #data["M"] = M
+        
+        WM = W@M
+        U,S,V = torch.svd(WM, compute_uv=self.compute_basis)
 
-        SVD = W@M
-        U,S,V = torch.svd(SVD, compute_uv=self.compute_basis)
+        data["WM"] = WM
 
         if self.compute_basis:
             P = V[:,:,V.shape[2]-self.r:]
             data["P"] = P
 
-        lam = 0.003#1e5#0.15
+        lam = 0.03 #0.003    #1e5#0.15
         s = S[:,S.shape[1]-self.r:]
-        lam_r = 0.01
+        lam_r = 0.5 #0.01
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
         reg = Temb @ Temb.transpose(1,2)
-        reg_loss = lam_r * ((reg-I)**2).sum() # PointNet regularization
+        reg_loss = lam_r * ((reg-I)**2).mean() # PointNet regularization
 
-        loss_cons = -w.mean() + lam * s.sum() + reg_loss# + -0.01*data["mask"].sum() nono
+        loss_cons = -w.mean() + lam * s.mean() + reg_loss# + -0.01*data["mask"].sum() nono
 
-        #print(-w.mean(), lam*s.sum(), reg_loss)
+        print(-w.mean(), lam*s.mean(), reg_loss)
         percent = 100.0*(w[0] > 0.9).sum()/w.shape[1]
-        #print(percent, w.shape[1])
+        print(percent, w.shape[1])
 
         return loss_cons, data
 
@@ -293,16 +297,18 @@ class HomographyConsensusLoss(ConsensusLoss):
             # # # # # # # # # # # # # # # #
             # Construct homography matrix #
             # # # # # # # # # # # # # # # #
-            w = data["w"]
-            M = data["M"]
+            #w = data["w"]
+            #M = data["M"]
 
-            M = (M/torch.norm(M, dim=2, keepdim=True).expand(-1,-1,9))
+            #M = (M/torch.norm(M, dim=2, keepdim=True).expand(-1,-1,9))
 
-            ww = torch.sigmoid(50 * (w - 0.5))
-            W = torch.diag_embed(ww)
+            #ww = torch.sigmoid(50 * (w - 0.5))
+            #W = torch.diag_embed(ww)
 
 
-            WM = W@M
+            #WM = W@M
+
+            WM = data["WM"]
 
             WM2 = torch.stack((
                 WM[:,:,4],
