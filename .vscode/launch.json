@@ -124,18 +124,20 @@
             ]
         },
         {
-            "name": "FCONS Debug",
+            "name": "homo-debug",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "subProcess": true,
             "args": [
-                "fcons-debug",
+                "homo-debug",
                 "--workers",
                 "1",
                 "--load",
-                "checkpoints/h2/epoch_30.pt"
+                "checkpoints/homo_all_s_3/epoch_1.pt",
+                "--dataset",
+                "kitti_homo_adapt"
             ]
         },
     ]

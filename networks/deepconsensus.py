@@ -198,61 +198,97 @@ class ConsensusLoss():
     def __call__(self, data):
 
         Ap, Bp = data["x"][:,:self.d], data["x"][:,self.d:]
-        w = data["w"]
+        pred = data["w"]
         Temb = data["Temb"]
+        B, N = pred.shape
 
-        #ww = torch.sigmoid(10 * (w - 0.5))
+        #inlier_tresh = 0.5
+        #inlier_prob = 1.0 - pred
+        #inlier_count_soft = torch.nn.functional.sigmoid(5 * (inlier_prob - inlier_tresh)).sum(dim=1)
+        #inlier_ratio_soft = inlier_count_soft / N
+        #inlier_ratio_soft = inlier_prob.mean()
 
-        W = torch.diag_embed(w)
-        M = self.vandermonde_matrix(Ap, Bp)
+        #n_inliers = (inlier_prob > inlier_tresh).type_as(inlier_prob).mean()
+
+        inlier_prob = pred
+
+        weights = inlier_prob + torch.rand_like(inlier_prob) * 1e-9
+        #weights = inlier_prob# + torch.rand_like(inlier_prob) * 1e-9
+        weights = weights / torch.norm(weights, dim=1, keepdim=True)
+
+        data["inliers"] = inlier_prob
+
+        vandermonde = self.vandermonde_matrix(Ap, Bp)
+        weighted_vandermonde = torch.diag_embed(weights) @ vandermonde
+        data["WM"] = weighted_vandermonde
         
-        data["w"] = w
-        #data["M"] = M
-        
-        WM = W@M
-        U,S,V = torch.svd(WM, compute_uv=self.compute_basis)
-
-        data["WM"] = WM
+        U, S, V = torch.svd(weighted_vandermonde, compute_uv=self.compute_basis)
 
         if self.compute_basis:
             P = V[:,:,V.shape[2]-self.r:]
             data["P"] = P
+        
+        # Inlier loss
+        #lam_inliers = 0.0001
+        lam_inliers = 0.001
+        #inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
+        inlier_loss = -lam_inliers * inlier_prob.mean()
 
-        lam = 0.03 #0.003    #1e5#0.15
+        # Vander singular loss
         s = S[:,S.shape[1]-self.r:]
-        lam_r = 0.5 #0.01
+        s1 = S[:,:S.shape[1]-self.r]
+        lam_vander = 1.0
+        vander_loss = lam_vander * s.mean()
+        #vander_loss1 = - 0.01 * s1.mean()
+        
+        # PointNet regularization loss
+        lam_reg = 0.01
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
-        reg = Temb @ Temb.transpose(1,2)
-        reg_loss = lam_r * ((reg-I)**2).mean() # PointNet regularization
+        reg_loss = lam_reg * ((Temb @ Temb.transpose(1,2) - I)**2).mean()
 
-        loss_cons = -w.mean() + lam * s.mean() + reg_loss# + -0.01*data["mask"].sum() nono
+        total_loss = inlier_loss + vander_loss + reg_loss
 
-        print(-w.mean(), lam*s.mean(), reg_loss)
-        percent = 100.0*(w[0] > 0.9).sum()/w.shape[1]
-        print(percent, w.shape[1])
+        #print(inlier_loss.item(), reg_loss.item(), N)
+        #print(weights.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
+        print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
 
-        return loss_cons, data
+        return total_loss, data
 
 def fundamental_homography_vandermonde_matrix(u, v):
     # u/v --> [B,2,N]
     B,_,N = u.shape
+
+    """
+    u[:,0,:], 
+    u[:,1,:], 
+    v[:,0,:], 
+    v[:,1,:], 
+    u[:,0,:] * v[:,0,:],
+    u[:,0,:] * v[:,1,:],
+    u[:,1,:] * v[:,0,:],
+    u[:,1,:] * v[:,1,:],
+    torch.ones(B,N,device=u.device),
+    """
+
     M = torch.stack([
+
+        u[:,0,:] * v[:,0,:],
+        u[:,0,:] * v[:,1,:],
         u[:,0,:], 
+        u[:,1,:] * v[:,0,:],
+        u[:,1,:] * v[:,1,:],
         u[:,1,:], 
         v[:,0,:], 
         v[:,1,:], 
-        u[:,0,:] * v[:,0,:],
-        u[:,0,:] * v[:,1,:],
-        u[:,1,:] * v[:,0,:],
-        
-        u[:,1,:] * v[:,1,:],
         torch.ones(B,N,device=u.device),
-
-        #u[:,1,:],
-        #v[:,1,:],
+        
         
         
     ], dim=1).transpose(1,2)
+
+    # Normalize
+    M = (M/torch.norm(M, dim=2, keepdim=True).expand(-1,-1,9))
+
     return M
 
 class FundamentalConsensusLoss(ConsensusLoss):
@@ -289,11 +325,9 @@ class HomographyConsensusLoss(ConsensusLoss):
 
     def __call__(self, data):
         loss_cons, data = super().__call__(data)
-        
-        
-        loss_total = loss_cons
 
         if self.pred:
+        #if True:
             # # # # # # # # # # # # # # # #
             # Construct homography matrix #
             # # # # # # # # # # # # # # # #
@@ -310,6 +344,7 @@ class HomographyConsensusLoss(ConsensusLoss):
 
             WM = data["WM"]
 
+            """
             WM2 = torch.stack((
                 WM[:,:,4],
                 WM[:,:,5],
@@ -321,8 +356,9 @@ class HomographyConsensusLoss(ConsensusLoss):
                 WM[:,:,3],
                 WM[:,:,8],
             ), dim=2)
-            
-            U,S,V = torch.svd(WM2)
+            """
+
+            U,S,V = torch.svd(WM)
             basis = V[:,:,V.shape[2]-self.r:]
             
             # target basis:
@@ -340,12 +376,14 @@ class HomographyConsensusLoss(ConsensusLoss):
             A1 = basis[:,0:3,:]
             A2 = basis[:,3:6,:]
 
-            #n1 = torch.svd(A1)[2].transpose(1, 2)[:,:,-1] # nullspace of A1
-            #n2 = torch.svd(A2)[2].transpose(1, 2)[:,:,-1] # nullspace of A2
-            
-            n1 = torch.svd(A1)[2][:,:,-1] # nullspace of A1
-            n2 = torch.svd(A2)[2][:,:,-1] # nullspace of A2
-            
+            #n1 = torch.svd(A1)[2][:,:,-1] # nullspace of A1
+            #n2 = torch.svd(A2)[2][:,:,-1] # nullspace of A2
+
+            u1, s1, v1 = torch.svd(A1)
+            u2, s2, v2 = torch.svd(A2)
+            n1 = v1[:,:,-1]
+            n2 = v2[:,:,-1]
+
             # Change of basis using nullspace of A1 and A2
             # will introduce zeroes like in the target basis
             x1 = (basis @ n1.unsqueeze(2)).squeeze(2)
@@ -380,7 +418,13 @@ class HomographyConsensusLoss(ConsensusLoss):
 
             data["H_pred"] = H
 
-        return 1.0*loss_total, data
+        #print(vander_loss.item(), loss_cons.item())
+
+        #total_loss = loss_cons + vander_loss# + vander_loss1 + vander_loss2
+
+        #print(data["reg_loss"].item(), data["inlier_loss"].item(), vander_loss.item())
+
+        return loss_cons, data
 
 class RTConsensus(nn.Module):
 

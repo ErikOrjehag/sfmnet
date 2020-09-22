@@ -24,10 +24,11 @@ class HomographyDebugger(DebuggerPointBase):
 
         if True: # match descriptors using pytorch
             x = utils.torch_to_numpy(data["x"][self.b].transpose(0,1))
-            w = utils.torch_to_numpy(data["w"][self.b])
+            w = utils.torch_to_numpy(data["inliers"][self.b])
+            self.inliers = w
             ap, bp = x[:,:2], x[:,2:]
             print(w.shape)
-            inliers = (w > 0.99)
+            inliers = (w > 0.5)
             self.img_matches.append(viz.draw_text("inliers fcons", viz.draw_matches(self.img, self.warp, ap, bp, inliers)))
 
             src_pts = np.float32(ap).reshape(-1,1,2)

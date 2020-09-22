@@ -34,7 +34,7 @@ class BaseTrainer():
         self.optimizer = torch.optim.Adam(self.get_parameter_groups(), lr=args.lr, betas=(0.9, 0.999))
         
         # Learning rate scheduler
-        #self.lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=2, factor=0.5)
+        #self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.1)
 
         # Load
         self.EPOCH_START = 0
@@ -104,9 +104,6 @@ class BaseTrainer():
             samples = (self.epoch * N_steps + step) * self.BATCH
             print(f"Epoch {self.epoch+1}/{self.EPOCHS} ({percent:3.0f}%, eta: {utils.sec_to_hms(eta)}) " +
             f"| {samples:5} samples | {t_sample_ms:.0f} ms/sample -> loss: {avg_loss:.3f}")
-
-            # Learning rate scheduler
-            #self.lr_scheduler.step(avg_loss)
             
             if self.SHOULD_WRITE:
                 self.writer.add_scalar("loss", scalar_value=avg_loss, global_step=samples)
@@ -116,6 +113,8 @@ class BaseTrainer():
                             self.writer.add_scalar(f"val/{key}", scalar_value=val_metrics[key], global_step=samples)
                             self.writer.add_scalar(f"train/{key}", scalar_value=train_metrics[key], global_step=samples)
 
+        # Learning rate scheduler
+        #self.lr_scheduler.step()
 
     def __validate(self):
         N = len(self.loaders["val"])
