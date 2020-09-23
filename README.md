@@ -1,5 +1,6 @@
 # sfmnet
 
+
 ## Train
 python main.py point-train --log-interval 100 --lr 0.001 --name pointuni2
 python main.py point-train --log-interval 100 --lr 0.0001 --dataset cocokittylyft_homo_adapt --name point_all2
@@ -12,6 +13,8 @@ python main.py fcons-train --log-interval 500 --lr 0.0001 --name fc30 --load-poi
 python main.py point-debug --load checkpoints/pointuni2/epoch_30.pt
 python main.py fcons-debug --load checkpoints/fc29/epoch_1.pt 
 
+## Homo that works
+python main.py homo-synth-train --log-interval 10 --lr 0.0001 --name homo_synth_36 --dataset synth_homo_points --batch 128 --epochs 300
 
 ## Training data junk
 
