@@ -127,6 +127,7 @@ class HomoAdapSynthPointDataset():
         #coords[:,0] = (coords[:,0]/2.0)+0.5
         #coords[:,1] = (coords[:,1]/2.0)+0.5
 
+        """
         x1 = 1e5
         x2 = 3e5
         y1 = 1.0
@@ -137,15 +138,21 @@ class HomoAdapSynthPointDataset():
 
         y = min(y1, max(y2, k*self.i + m))
         self.i += 1
+        """
 
         #inliers = torch.rand(self.N_points) < 0.9
-        inliers = torch.rand(self.N_points) < random.gauss(0.9, 0.1)
-        offset = ((torch.rand((2, self.N_points))-0.5)*200*y) * ~inliers.expand(2, -1)
+        inliers = torch.rand(self.N_points) < random.gauss(0.9, 0.05)
+        
         w_gt = inliers.to(torch.float64)
 
+        #offset = ((torch.rand((2, self.N_points))-0.5)*200*y) * ~inliers.expand(2, -1)
+        max_off = 200
+        min_off = 5
+        signs = torch.sign(torch.rand((2, self.N_points))-0.5)
+        amps = min_off + (max_off-min_off) * torch.rand((2, self.N_points))
+        offset = (signs*amps) * ~inliers.expand(2, -1)
+
         coords_h += offset.transpose(0,1)
-
-
 
         #coords[:,0] = (coords[:,0] / self.W) - 0.5
         #coords[:,1] = (coords[:,1] / self.H) - 0.5
