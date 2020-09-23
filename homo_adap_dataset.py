@@ -105,9 +105,10 @@ class HomoAdapSynthPointDataset():
         #coords[1] = (coords[1]-0.5)*2
         coords = torch.cat((coords, torch.ones((1, self.N_points))), dim=0)
         
-        h = homography.random_homography(rotation=np.pi/20, translation=10, scale=0.2, sheer=0.05, projective=0.001)
+        #h = homography.random_homography(rotation=np.pi/20, translation=10, scale=0.2, sheer=0.05, projective=0.001)
         #h = homography.random_homography(rotation=0, translation=0, scale=0.9, sheer=0, projective=0)
-
+        h = homography.random_homography(rotation=np.pi/20, translation=0.05, scale=0.2, sheer=0.05, projective=0.001)
+        
         coords_h = h @ coords
 
         coords = geometry.from_homog_coords(coords.transpose(0, 1))
@@ -129,7 +130,7 @@ class HomoAdapSynthPointDataset():
 
         coords_h += offset.transpose(0,1)
 
-        
+
 
         #coords[:,0] = (coords[:,0] / self.W) - 0.5
         #coords[:,1] = (coords[:,1] / self.H) - 0.5
