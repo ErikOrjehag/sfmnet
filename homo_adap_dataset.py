@@ -140,7 +140,7 @@ class HomoAdapSynthPointDataset():
 
         #inliers = torch.rand(self.N_points) < 0.9
         inliers = torch.rand(self.N_points) < random.gauss(0.9, 0.1)
-        offset = ((torch.rand((2, self.N_points))-0.5)*200) * ~inliers.expand(2, -1)
+        offset = ((torch.rand((2, self.N_points))-0.5)*200*y) * ~inliers.expand(2, -1)
         w_gt = inliers.to(torch.float64)
 
         coords_h += offset.transpose(0,1)
