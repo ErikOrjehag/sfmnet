@@ -76,7 +76,8 @@ class DebuggerHomoSynthPoint(DebuggerBase):
             inliers_gt = w_gt > 0.5
 
             w = utils.torch_to_numpy(data["w"])[self.b]
-            inliers = w > 0.5
+            inlier_sig = utils.torch_to_numpy(data["inlier_sig"])[self.b]
+            inliers = inlier_sig > 0.5
 
             N, C = p.shape
 
@@ -112,7 +113,8 @@ class DebuggerHomoSynthPoint(DebuggerBase):
                 cv2.imshow("matches", img_matches)
 
                 #plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
-                plt.hist(w, 10, (0.,1.), color=(0,0,1))
+                #plt.hist(w, 10, (0.,1.), color=(0,0,1))
+                plt.hist(inlier_sig, 10, (0.,1.), color=(0,0,1))
                 
                 fig.canvas.flush_events()
 

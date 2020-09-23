@@ -202,21 +202,20 @@ class ConsensusLoss():
         Temb = data["Temb"]
         B, N = pred.shape
 
-        #inlier_tresh = 0.5
-        #inlier_prob = 1.0 - pred
-        #inlier_count_soft = torch.nn.functional.sigmoid(5 * (inlier_prob - inlier_tresh)).sum(dim=1)
-        #inlier_ratio_soft = inlier_count_soft / N
-        #inlier_ratio_soft = inlier_prob.mean()
-
-        #n_inliers = (inlier_prob > inlier_tresh).type_as(inlier_prob).mean()
-
+        inlier_tresh = 0.5
         inlier_prob = pred
+        inlier_sig = torch.nn.functional.sigmoid(20 * (inlier_prob - inlier_tresh))
+        inlier_count_soft = inlier_sig.sum(dim=1)
+        inlier_ratio_soft = inlier_count_soft / N
+        n_inliers = (inlier_prob > inlier_tresh).type_as(inlier_prob).mean()
+
+        #inlier_prob = pred
 
         weights = inlier_prob + torch.rand_like(inlier_prob) * 1e-9
         #weights = inlier_prob# + torch.rand_like(inlier_prob) * 1e-9
         weights = weights / torch.norm(weights, dim=1, keepdim=True)
 
-        data["inliers"] = inlier_prob
+        data["inlier_sig"] = inlier_sig
 
         vandermonde = self.vandermonde_matrix(Ap, Bp)
         weighted_vandermonde = torch.diag_embed(weights) @ vandermonde
@@ -229,18 +228,14 @@ class ConsensusLoss():
             data["P"] = P
         
         # Inlier loss
-        #lam_inliers = 0.0001
-        #lam_inliers = 0.001
         lam_inliers = 0.001
-        #inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
-        inlier_loss = -lam_inliers * inlier_prob.mean()
+        inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
+        #inlier_loss = -lam_inliers * inlier_prob.mean()
 
         # Vander singular loss
         s = S[:,S.shape[1]-self.r:]
-        s1 = S[:,:S.shape[1]-self.r]
         lam_vander = 1.0
         vander_loss = lam_vander * s.mean()
-        #vander_loss1 = - 0.01 * s1.mean()
         
         # PointNet regularization loss
         lam_reg = 0.01
@@ -251,7 +246,8 @@ class ConsensusLoss():
         total_loss = inlier_loss + vander_loss + lam_inliers
 
         #print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
-        print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), N)
+        #print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), N)
+        print(n_inliers.item(), inlier_ratio_soft.mean().item(), inlier_loss.item(), vander_loss.item(), N)
 
         return total_loss, data
 

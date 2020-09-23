@@ -26,13 +26,15 @@ class HomographyTrainer(BaseTrainer):
         if args.load_point:
             point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
             self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
-        elif args.load_consensus:
-            consensus_checkpoint = torch.load(args.load_consensus, map_location=torch.device(args.device))
-            self.model.load_state_dict(consensus_checkpoint["model"])
-        else:
-            print("NEED TO LOAD MODEL!")
+        elif:
+            print("NEED TO LOAD siamese_unsuperpoint model!")
             exit()
 
+        if args.load_consensus:
+            consensus_checkpoint = torch.load(args.load_consensus, map_location=torch.device(args.device))
+            self.model.pointnet_binseg.load_state_dict(consensus_checkpoint["model"]["pointnet_binseg"])
+        
+        
         #self.optimizer.add_param_group({'params': self.model.siamese_unsuperpoint.parameters() })
         #self.optimizer.load_state_dict(point_checkpoint["optimizer"])
         #self.optimizer.add_param_group({'params': self.model.pointnet_binseg.parameters() })
