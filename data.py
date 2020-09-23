@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from kitti import Kitti
 from lyft import Lyft
-from homo_adap_dataset import HomoAdapDataset, HomoAdapDatasetCocoKittiLyft, HomoAdapDatasetFromSequences
+from homo_adap_dataset import HomoAdapDataset, HomoAdapDatasetCocoKittiLyft, HomoAdapDatasetFromSequences, HomoAdapSynthPointDataset
 import itertools
 
 kitti_path = "/home/ai/Code/Data/kitti2"
@@ -85,6 +85,8 @@ def get_batch_loader_split(args):
         return _get_batch_loader_split(HomoAdapDatasetFromSequences, kitti_path, args.batch, args.workers)
     elif args.dataset == "lyft_homo_adapt":
         return _get_batch_loader_split(HomoAdapDatasetFromSequences, lyft_path, args.batch, args.workers)
+    elif args.dataset == "synth_homo_points":
+        return _get_batch_loader_split(HomoAdapSynthPointDataset, None, args.batch, args.workers)
     else:
         print("No dataset named: %s" % args.dataset)
         exit()

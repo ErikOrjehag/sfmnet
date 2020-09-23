@@ -48,3 +48,4 @@ class HomographyDebugger(DebuggerPointBase):
             img_H_warped = cv2.warpPerspective(self.img, H, (self.img.shape[1], self.img.shape[0]))
             ap_H_warped = cv2.perspectiveTransform(src_pts, H).squeeze(1)
             self.img_matches.append(viz.draw_text("H warp", viz.draw_matches(img_H_warped, self.warp, ap_H_warped, bp, mask, draw_outliers=False)))
+

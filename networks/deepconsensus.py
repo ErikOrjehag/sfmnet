@@ -246,7 +246,7 @@ class ConsensusLoss():
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
         reg_loss = lam_reg * ((Temb @ Temb.transpose(1,2) - I)**2).mean()
 
-        total_loss = inlier_loss + vander_loss + reg_loss
+        total_loss = inlier_loss + vander_loss + reg_loss + lam_inliers
 
         #print(inlier_loss.item(), reg_loss.item(), N)
         #print(weights.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
@@ -481,6 +481,105 @@ class RTConsensusLoss(ConsensusLoss):
     def __init__(self):
         super().__init__(r=3, d=3)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+------------------------------------------------------
+"""
+
+
+class HomographyConsensusSynthPoints(nn.Module):
+    """
+    Uses the data from
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        self.pointnet_binseg = PointNetBinSeg(K=4)
+
+    def forward(self, data):
+
+        #x1 = (data["p"] - torch.tensor([416.0, 128.0], device=data["p"].device) / 2.0) / 416.0
+        #x2 = (data["ph"] - torch.tensor([416.0, 128.0], device=data["ph"].device) / 2.0) / 416.0
+
+        x1 = data["p"]
+        x2 = data["ph"]
+
+        x = torch.cat((x1, x2), dim=2).transpose(1,2)
+
+        data = { **data, **self.pointnet_binseg(x) }
+
+        return data
+
+
+class HomographyConsensusSynthPointsLoss():
+
+    def __init__(self):
+        self.r = 3
+        self.d = 4
+
+    def vandermonde_matrix(self, u, v):
+        return fundamental_homography_vandermonde_matrix(u, v)
+
+    def __call__(self, data):
+
+        Ap = data["p"]
+        Bp = data["ph"]
+        
+        pred = data["w"]
+
+        B, N = pred.shape
+
+        inlier_prob = pred
+
+        weights = inlier_prob + torch.rand_like(inlier_prob) * 1e-9
+        weights = weights / torch.norm(weights, dim=1, keepdim=True)
+
+        data["inliers"] = inlier_prob
+
+        vandermonde = self.vandermonde_matrix(Ap, Bp)
+        weighted_vandermonde = torch.diag_embed(weights) @ vandermonde
+        data["WM"] = weighted_vandermonde
+        
+        U, S, V = torch.svd(weighted_vandermonde, compute_uv=self.compute_basis)
+        
+        # Inlier loss
+        lam_inliers = 0.001
+        #inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
+        inlier_loss = -lam_inliers * inlier_prob.mean()
+
+        # Vander singular loss
+        s = S[:,S.shape[1]-self.r:]
+        s1 = S[:,:S.shape[1]-self.r]
+        lam_vander = 1.0
+        vander_loss = lam_vander * s.mean()
+        
+        # PointNet regularization loss
+        lam_reg = 0.01
+        I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
+        reg_loss = lam_reg * ((Temb @ Temb.transpose(1,2) - I)**2).mean()
+
+        total_loss = inlier_loss + vander_loss + reg_loss
+
+        print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
+
+
+        return total_loss, data
 
 
 

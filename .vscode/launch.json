@@ -140,5 +140,22 @@
                 "kitti_homo_adapt"
             ]
         },
+        {
+            "name": "homo-synth-debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "homo-synth-debug",
+                "--workers",
+                "1",
+                "--dataset",
+                "synth_homo_points",
+                "--load",
+                "checkpoints/homo_synth_7/epoch_300.pt",
+            ]
+        },
     ]
 }

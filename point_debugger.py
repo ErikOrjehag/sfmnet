@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 from networks.unsuperpoint import SiameseUnsuperPoint, UnsuperLoss, brute_force_match
 from matplotlib import pyplot as plt
+from networks.deepconsensus import HomographyConsensusSynthPoints, HomographyConsensusSynthPointsLoss, HomographyConsensusLoss
 
 class DebuggerBase():
     def __init__(self, args):
@@ -17,8 +18,9 @@ class DebuggerBase():
 
         self.model, self.loss_fn = self._setup_model_and_loss()
 
-        checkpoint = torch.load(args.load, map_location=torch.device(args.device))
-        self.model.load_state_dict(checkpoint["model"])
+        if args.load:
+            checkpoint = torch.load(args.load, map_location=torch.device(args.device))
+            self.model.load_state_dict(checkpoint["model"])
 
     def _setup_model_and_loss(self):
         pass
@@ -40,6 +42,82 @@ class DebuggerBase():
         print(f"loss {loss.item():.3f}")
 
         self._debug_step(loss, data)
+
+class DebuggerHomoSynthPoint(DebuggerBase):
+
+    def __init__(self, args):
+        super().__init__(args)
+
+        self.b = 0 # current batch for rendering
+
+    def _setup_model_and_loss(self):
+        return (
+            HomographyConsensusSynthPoints().to(self.DEVICE), 
+            HomographyConsensusLoss(pred=True) 
+        )
+
+    def _debug_step(self, loss, data):
+
+        B = data["p"].shape[0]
+        while True:
+            print(f"b = {self.b}")
+            p = utils.torch_to_numpy(data["p"])[self.b].transpose(0,1)
+            ph = utils.torch_to_numpy(data["ph"])[self.b].transpose(0,1)
+
+            H = 128
+            W = 416
+
+            p[:,0] = p[:,0] * W
+            p[:,1] = p[:,1] * H
+            ph[:,0] = ph[:,0] * W
+            ph[:,1] = ph[:,1] * H
+            
+            w_gt = utils.torch_to_numpy(data["w_gt"])[self.b]
+            inliers_gt = w_gt > 0.5
+
+            w = utils.torch_to_numpy(data["w"])[self.b]
+            inliers = w > 0.5
+
+            N, C = p.shape
+
+            imgp = np.uint8(np.zeros((H, W, 3)))
+            imgph = np.uint8(np.zeros((H, W, 3)))
+
+            img_matches = []
+
+            img_matches.append(viz.draw_text("dataset", viz.draw_matches(imgp, imgph, p, ph, inliers_gt)))
+            img_matches.append(viz.draw_text("pred", viz.draw_matches(imgp, imgph, p, ph, inliers)))
+
+            img_matches = np.concatenate([img for img in img_matches])
+
+            plt.ion()
+            fig = plt.figure(1)
+            plt.clf()
+
+            while True:
+                key = cv2.waitKey(10)
+                if key == 27: # esc
+                    print("exit")
+                    exit()
+                elif key == 119: # w
+                    self.b = min(self.b+1, B-1)
+                    break
+                elif key == 115: # s
+                    self.b = max(self.b-1, 0)
+                    break
+                elif key == 32: # space
+                    print("next")
+                    return
+                
+                cv2.imshow("matches", img_matches)
+
+                #plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
+                plt.hist(w, 10, (0.,1.), color=(0,0,1))
+                
+                fig.canvas.flush_events()
+
+
+
 
 class DebuggerPointBase(DebuggerBase):
 
@@ -149,3 +227,44 @@ class PointDebugger(DebuggerPointBase):
             p1h = utils.torch_to_numpy(data["APh"][self.b].transpose(0,1))
             self.img_matches.append(viz.draw_text("Matched ids", viz.draw_matches(self.img, self.warp, self.p1[ids][mask], self.p2[mask])))
             #self.img_matches.append(viz.draw_matches(img, warp, p1, p1h))
+
+class SynthHomoPointDebugger(DebuggerBase):
+
+
+    def __init__(self, args):
+        super().__init__(args)
+
+        self.b = 0 # current batch for rendering
+
+    def _debug_step(self, loss, data):
+
+        while True:
+            print(f"b = {self.b}")
+
+            
+
+            plt.ion()
+            fig = plt.figure(1)
+            plt.clf()
+
+            while True:
+                key = cv2.waitKey(10)
+                if key == 27: # esc
+                    print("exit")
+                    exit()
+                elif key == 119: # w
+                    self.b = min(self.b+1, self.B-1)
+                    break
+                elif key == 115: # s
+                    self.b = max(self.b-1, 0)
+                    break
+                elif key == 32: # space
+                    print("next")
+                    return
+                
+                cv2.imshow("matches", self.img_matches)
+
+                #plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
+                plt.hist(self.inliers, 10, (0.,1.), color=(0,0,1))
+                
+                fig.canvas.flush_events()

@@ -21,10 +21,12 @@ from sfm_debugger import SFMDebugger
 from sfm_tester import SFMTester
 
 from point_trainer import PointTrainer
-from point_debugger import PointDebugger
+from point_debugger import PointDebugger, DebuggerHomoSynthPoint
 
 from homography_trainer import HomographyTrainer
 from homography_debugger import HomographyDebugger
+
+from homography_synth_trainer import HomographySynthTrainer
 
 def parse_args(extra=[], overwrite={}):
     always = ["net", "workers", "device", "load"]
@@ -56,6 +58,12 @@ def main():
         action = HomographyTrainer(parse_args(["name", "batch", "train", "dataset"]))
     elif choice == "homo-debug":
         action = HomographyDebugger(parse_args(["loss", "batch", "dataset"]))
+
+    elif choice == "homo-synth-train":
+        action = HomographySynthTrainer(parse_args(["name", "batch", "train", "dataset"]))
+    elif choice == "homo-synth-debug":
+        action = DebuggerHomoSynthPoint(parse_args(["loss", "batch", "dataset"]))
+
 
     # Ooops..
     else:

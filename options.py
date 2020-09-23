@@ -16,6 +16,7 @@ def get_args(description, options, overwrite):
     parser.add_argument("--dataset", default="kitti", type=str, choices=[
       "kitti", "lyft", "lyft_kittistyle", "synthia", 
       "coco_homo_adapt", "kitti_homo_adapt", "lyft_homo_adapt", "cocokittylyft_homo_adapt",
+      "synth_homo_points",
       ], help="Which dataset?")
   
   if "load" in options:
