@@ -10,6 +10,7 @@ import numpy as np
 import cv2
 import reconstruction
 import geometry
+import random
 
 class HomoAdapDataset(data.Dataset):
 
@@ -91,6 +92,8 @@ class HomoAdapSynthPointDataset():
         self.H = 128
         self.W = 416
 
+        self.i = 0
+
     def __len__(self):
         return 5000
 
@@ -124,7 +127,19 @@ class HomoAdapSynthPointDataset():
         #coords[:,0] = (coords[:,0]/2.0)+0.5
         #coords[:,1] = (coords[:,1]/2.0)+0.5
 
-        inliers = torch.rand(self.N_points) < 0.90
+        x1 = 1e5
+        x2 = 3e5
+        y1 = 1.0
+        y2 = 0.1
+
+        k = (y2-y1)/(x2-x1)
+        m = y1-k*x1
+
+        y = min(y1, max(y2, k*self.i + m))
+        self.i += 1
+
+        #inliers = torch.rand(self.N_points) < 0.9
+        inliers = torch.rand(self.N_points) < random.gauss(0.9, 0.1)
         offset = ((torch.rand((2, self.N_points))-0.5)*200) * ~inliers.expand(2, -1)
         w_gt = inliers.to(torch.float64)
 
