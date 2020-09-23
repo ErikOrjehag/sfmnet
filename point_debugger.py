@@ -67,10 +67,10 @@ class DebuggerHomoSynthPoint(DebuggerBase):
             H = 128
             W = 416
 
-            p[:,0] = p[:,0] * W
-            p[:,1] = p[:,1] * H
-            ph[:,0] = ph[:,0] * W
-            ph[:,1] = ph[:,1] * H
+            #p[:,0] = p[:,0] * W
+            #p[:,1] = p[:,1] * H
+            #ph[:,0] = ph[:,0] * W
+            #ph[:,1] = ph[:,1] * H
             
             w_gt = utils.torch_to_numpy(data["w_gt"])[self.b]
             inliers_gt = w_gt > 0.5

@@ -34,7 +34,7 @@ class BaseTrainer():
         self.optimizer = torch.optim.Adam(self.get_parameter_groups(), lr=args.lr, betas=(0.9, 0.999))
         
         # Learning rate scheduler
-        #self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.1)
+        #self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=int(10000/128), gamma=0.1)
 
         # Load
         self.EPOCH_START = 0

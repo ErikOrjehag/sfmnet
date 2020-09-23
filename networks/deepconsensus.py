@@ -230,6 +230,7 @@ class ConsensusLoss():
         
         # Inlier loss
         #lam_inliers = 0.0001
+        #lam_inliers = 0.001
         lam_inliers = 0.001
         #inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
         inlier_loss = -lam_inliers * inlier_prob.mean()
@@ -246,11 +247,11 @@ class ConsensusLoss():
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
         reg_loss = lam_reg * ((Temb @ Temb.transpose(1,2) - I)**2).mean()
 
-        total_loss = inlier_loss + vander_loss + reg_loss + lam_inliers
+        #total_loss = inlier_loss + vander_loss + reg_loss + lam_inliers
+        total_loss = inlier_loss + vander_loss + lam_inliers
 
-        #print(inlier_loss.item(), reg_loss.item(), N)
-        #print(weights.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
-        print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
+        #print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
+        print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), N)
 
         return total_loss, data
 

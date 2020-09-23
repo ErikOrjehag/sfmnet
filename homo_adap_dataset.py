@@ -97,17 +97,17 @@ class HomoAdapSynthPointDataset():
     def __getitem__(self, index):
 
         coords = torch.rand((2, self.N_points))
-        coords[0] = (coords[0]-0.5)# * self.W
-        coords[1] = (coords[1]-0.5)# * self.H
+        coords[0] = (coords[0]-0.5) * self.W
+        coords[1] = (coords[1]-0.5) * self.H
         #coords[0] *= self.W
         #coords[1] *= self.H
         #coords[0] = (coords[0]-0.5)*2
         #coords[1] = (coords[1]-0.5)*2
         coords = torch.cat((coords, torch.ones((1, self.N_points))), dim=0)
         
-        #h = homography.random_homography(rotation=np.pi/20, translation=10, scale=0.2, sheer=0.05, projective=0.001)
+        h = homography.random_homography(rotation=np.pi/20, translation=10, scale=0.2, sheer=0.05, projective=0.001)
         #h = homography.random_homography(rotation=0, translation=0, scale=0.9, sheer=0, projective=0)
-        h = homography.random_homography(rotation=np.pi/20, translation=0.05, scale=0.2, sheer=0.05, projective=0.001)
+        #h = homography.random_homography(rotation=np.pi/20, translation=0.05, scale=0.2, sheer=0.05, projective=0.001)
         
         coords_h = h @ coords
 
@@ -125,7 +125,7 @@ class HomoAdapSynthPointDataset():
         #coords[:,1] = (coords[:,1]/2.0)+0.5
 
         inliers = torch.rand(self.N_points) < 0.90
-        offset = ((torch.rand((2, self.N_points))-0.5)*20) * ~inliers.expand(2, -1)
+        offset = ((torch.rand((2, self.N_points))-0.5)*200) * ~inliers.expand(2, -1)
         w_gt = inliers.to(torch.float64)
 
         coords_h += offset.transpose(0,1)
