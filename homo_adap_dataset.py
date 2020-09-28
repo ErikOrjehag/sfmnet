@@ -87,8 +87,6 @@ class HomoAdapSynthPointDataset():
     def __init__(self, root=None):
         super().__init__()
 
-        self.N_points = 128
-
         self.H = 128
         self.W = 416
 
@@ -99,14 +97,16 @@ class HomoAdapSynthPointDataset():
 
     def __getitem__(self, index):
 
-        coords = torch.rand((2, self.N_points))
+        N_points = 128
+
+        coords = torch.rand((2, N_points))
         coords[0] = (coords[0]-0.5) * self.W
         coords[1] = (coords[1]-0.5) * self.H
         #coords[0] *= self.W
         #coords[1] *= self.H
         #coords[0] = (coords[0]-0.5)*2
         #coords[1] = (coords[1]-0.5)*2
-        coords = torch.cat((coords, torch.ones((1, self.N_points))), dim=0)
+        coords = torch.cat((coords, torch.ones((1, N_points))), dim=0)
         
         h = homography.random_homography(rotation=np.pi/20, translation=10, scale=0.2, sheer=0.05, projective=0.001)
         #h = homography.random_homography(rotation=0, translation=0, scale=0.9, sheer=0, projective=0)
@@ -140,19 +140,22 @@ class HomoAdapSynthPointDataset():
         self.i += 1
         """
 
-        #inliers = torch.rand(self.N_points) < 0.9
-        inliers = torch.rand(self.N_points) < random.gauss(0.9, 0.05)
+        #inliers = torch.rand(N_points) < 0.9
+        inliers = torch.rand(N_points) < random.gauss(0.9, 0.05)
         
         w_gt = inliers.to(torch.float64)
 
-        #offset = ((torch.rand((2, self.N_points))-0.5)*200*y) * ~inliers.expand(2, -1)
-        max_off = 200
+        #offset = ((torch.rand((2, N_points))-0.5)*200*y) * ~inliers.expand(2, -1)
+        max_off = 50
         min_off = 5
-        signs = torch.sign(torch.rand((2, self.N_points))-0.5)
-        amps = min_off + (max_off-min_off) * torch.rand((2, self.N_points))
+        signs = torch.sign(torch.rand((2, N_points))-0.5)
+        amps = min_off + (max_off-min_off) * torch.rand((2, N_points))
         offset = (signs*amps) * ~inliers.expand(2, -1)
 
         coords_h += offset.transpose(0,1)
+
+        noise = ((torch.rand((2, N_points))-0.5)*2 * 0.3)  * inliers.expand(2, -1)
+        coords += noise.transpose(0,1)
 
         #coords[:,0] = (coords[:,0] / self.W) - 0.5
         #coords[:,1] = (coords[:,1] / self.H) - 0.5

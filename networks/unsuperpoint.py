@@ -151,7 +151,7 @@ class UnsuperPoint(nn.Module):
 
 class SiameseUnsuperPoint(nn.Module):
 
-    def __init__(self, N=200):
+    def __init__(self, N=400):
         super().__init__()
         self.unsuperpoint = UnsuperPoint(N=N)
 

@@ -21,6 +21,17 @@ class DebuggerBase():
         if args.load:
             checkpoint = torch.load(args.load, map_location=torch.device(args.device))
             self.model.load_state_dict(checkpoint["model"])
+        else:
+            if args.load_point:
+                point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
+                self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
+            if args.load_consensus:
+                # Only update pointnet_binseg
+                model_dict = self.model.state_dict()
+                consensus_checkpoint = torch.load(args.load_consensus, map_location=torch.device(args.device))
+                model_dict.update(consensus_checkpoint["model"])
+                self.model.load_state_dict(model_dict)
+
 
     def _setup_model_and_loss(self):
         pass
@@ -61,33 +72,34 @@ class DebuggerHomoSynthPoint(DebuggerBase):
         B = data["p"].shape[0]
         while True:
             print(f"b = {self.b}")
-            p = utils.torch_to_numpy(data["p"])[self.b].transpose(0,1)
-            ph = utils.torch_to_numpy(data["ph"])[self.b].transpose(0,1)
+            #p = utils.torch_to_numpy(data["p"])[self.b].transpose(0,1)
+            #ph = utils.torch_to_numpy(data["ph"])[self.b].transpose(0,1)
 
+            x = utils.torch_to_numpy(data["x"][self.b].transpose(0,1))
+            ap, bp = x[:,:2], x[:,2:]
             H = 128
             W = 416
-
-            p[:,0] += W/2
-            p[:,1] += H/2
-            ph[:,0] += W/2
-            ph[:,1] += H/2
+            ap[:,0] += W/2
+            ap[:,1] += H/2
+            bp[:,0] += W/2
+            bp[:,1] += H/2
             
             w_gt = utils.torch_to_numpy(data["w_gt"])[self.b]
             inliers_gt = w_gt > 0.5
 
             w = utils.torch_to_numpy(data["w"])[self.b]
-            inlier_sig = utils.torch_to_numpy(data["inlier_sig"])[self.b]
-            inliers = inlier_sig > 0.5
+            #inlier_sig = utils.torch_to_numpy(data["inlier_sig"])[self.b]
+            inliers = w > 0.5
 
-            N, C = p.shape
+            N = ap.shape[0]
 
-            imgp = np.uint8(np.zeros((H, W, 3)))
-            imgph = np.uint8(np.zeros((H, W, 3)))
+            img_a = np.uint8(np.zeros((H, W, 3)))
+            img_b = np.uint8(np.zeros((H, W, 3)))
 
             img_matches = []
 
-            img_matches.append(viz.draw_text("dataset", viz.draw_matches(imgp, imgph, p, ph, inliers_gt)))
-            img_matches.append(viz.draw_text("pred", viz.draw_matches(imgp, imgph, p, ph, inliers)))
+            img_matches.append(viz.draw_text("dataset", viz.draw_matches(img_a, img_b, ap, bp, inliers_gt)))
+            img_matches.append(viz.draw_text("pred", viz.draw_matches(img_a, img_b, ap, bp, inliers)))
 
             img_matches = np.concatenate([img for img in img_matches])
 
@@ -113,8 +125,8 @@ class DebuggerHomoSynthPoint(DebuggerBase):
                 cv2.imshow("matches", img_matches)
 
                 #plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
-                #plt.hist(w, 10, (0.,1.), color=(0,0,1))
-                plt.hist(inlier_sig, 10, (0.,1.), color=(0,0,1))
+                plt.hist(w, 10, (0.,1.), color=(0,0,1))
+                #plt.hist(inlier_sig, 10, (0.,1.), color=(0,0,1))
                 
                 fig.canvas.flush_events()
 

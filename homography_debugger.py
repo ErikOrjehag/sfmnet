@@ -24,16 +24,24 @@ class HomographyDebugger(DebuggerPointBase):
 
         if True: # match descriptors using pytorch
             x = utils.torch_to_numpy(data["x"][self.b].transpose(0,1))
-            w = utils.torch_to_numpy(data["inliers"][self.b])
-            self.inliers = w
             ap, bp = x[:,:2], x[:,2:]
+            H = 128
+            W = 416
+            ap[:,0] += W/2
+            ap[:,1] += H/2
+            bp[:,0] += W/2
+            bp[:,1] += H/2
+            
+            w = utils.torch_to_numpy(data["w"][self.b])
+            self.inliers = w
+            
             print(w.shape)
             inliers = (w > 0.5)
             self.img_matches.append(viz.draw_text("inliers fcons", viz.draw_matches(self.img, self.warp, ap, bp, inliers)))
 
             src_pts = np.float32(ap).reshape(-1,1,2)
             dst_pts = np.float32(bp).reshape(-1,1,2)
-            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 3.0)
+            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 2.0)
             mask = mask.flatten().astype(np.bool)
             self.img_matches.append(viz.draw_text("CV2 find homo", viz.draw_matches(self.img, self.warp, ap, bp, mask)))
 

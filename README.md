@@ -15,6 +15,7 @@ python main.py fcons-debug --load checkpoints/fc29/epoch_1.pt
 
 ## Homo that works
 python main.py homo-synth-train --log-interval 10 --lr 0.0001 --name homo_synth_36 --dataset synth_homo_points --batch 128 --epochs 300
+python main.py homo-synth-train --log-interval 10 --lr 0.0001 --name homo_synth_46 --dataset synth_homo_points --batch 128 --epochs 300
 
 ## Training data junk
 

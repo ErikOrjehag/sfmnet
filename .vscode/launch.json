@@ -157,5 +157,24 @@
                 "checkpoints/homo_synth_7/epoch_300.pt",
             ]
         },
+        {
+            "name": "homo-train",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "homo-train",
+                "--workers",
+                "1",
+                "--dataset",
+                "kitti_homo_adapt",
+                "--load-point",
+                "checkpoints/point_kitti/epoch_30.pt",
+                "--load-consensus",
+                "checkpoints/homo_synth_46/epoch_46.pt",
+            ]
+        },
     ]
 }

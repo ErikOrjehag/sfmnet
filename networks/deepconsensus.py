@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from networks.unsuperpoint import brute_force_match, SiameseUnsuperPoint, SequenceUnsuperPoint
+import utils
+import random
 
 def block(in_channels, out_channels):
     return nn.Sequential(
@@ -164,8 +166,18 @@ class HomographyConsensus(nn.Module):
         L = torch.min(mask.sum(dim=1))
 
         x = torch.stack([ torch.cat([Ap[b], Bp[b]], dim=0)[:,torch.randperm(Ap[b].shape[1],device=Ap[b].device)][:,:L] for b in range(B) ], dim=0)
+        
+        H = 128
+        W = 416
+        x[:,0,:] -= W/2
+        x[:,1,:] -= H/2
+        x[:,2,:] -= W/2
+        x[:,3,:] -= H/2
 
-        data = { **data, **self.pointnet_binseg(x) }
+        xx = utils.torch_to_numpy(x)
+        xxx = torch.tensor(xx).to(x.device)
+
+        data = { **data, **self.pointnet_binseg(xxx) }
 
         """
         X = [torch.cat([Ap[b], Bp[b]], dim=0).unsqueeze(0) for b in range(B)] # [[1,K=4,n] * B]
@@ -204,10 +216,10 @@ class ConsensusLoss():
 
         inlier_tresh = 0.5
         inlier_prob = pred
-        inlier_sig = torch.nn.functional.sigmoid(20 * (inlier_prob - inlier_tresh))
-        inlier_count_soft = inlier_sig.sum(dim=1)
-        inlier_ratio_soft = inlier_count_soft / N
-        n_inliers = (inlier_prob > inlier_tresh).type_as(inlier_prob).mean()
+        #inlier_sig = torch.nn.functional.sigmoid(20 * (inlier_prob - inlier_tresh))
+        #inlier_count_soft = inlier_sig.sum(dim=1)
+        #inlier_ratio_soft = inlier_count_soft / N
+        #n_inliers = (inlier_prob > inlier_tresh).type_as(inlier_prob).mean()
 
         #inlier_prob = pred
 
@@ -215,7 +227,7 @@ class ConsensusLoss():
         #weights = inlier_prob# + torch.rand_like(inlier_prob) * 1e-9
         weights = weights / torch.norm(weights, dim=1, keepdim=True)
 
-        data["inlier_sig"] = inlier_sig
+        #data["inlier_sig"] = inlier_sig
 
         vandermonde = self.vandermonde_matrix(Ap, Bp)
         weighted_vandermonde = torch.diag_embed(weights) @ vandermonde
@@ -229,8 +241,8 @@ class ConsensusLoss():
         
         # Inlier loss
         lam_inliers = 0.001
-        inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
-        #inlier_loss = -lam_inliers * inlier_prob.mean()
+        #inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
+        inlier_loss = -lam_inliers * inlier_prob.mean()
 
         # Vander singular loss
         s = S[:,S.shape[1]-self.r:]
@@ -246,8 +258,8 @@ class ConsensusLoss():
         total_loss = inlier_loss + vander_loss + lam_inliers
 
         #print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
-        #print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), N)
-        print(n_inliers.item(), inlier_ratio_soft.mean().item(), inlier_loss.item(), vander_loss.item(), N)
+        print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), N)
+        #print(n_inliers.item(), inlier_ratio_soft.mean().item(), inlier_loss.item(), vander_loss.item(), N)
 
         return total_loss, data
 
@@ -518,6 +530,12 @@ class HomographyConsensusSynthPoints(nn.Module):
         x2 = data["ph"]
 
         x = torch.cat((x1, x2), dim=2).transpose(1,2)
+
+        min_L = 20
+        max_L = 40#x.shape[-1]
+        L = int(min_L + (max_L - min_L) * random.random())
+        x = x[:,:,:L]
+        data["w_gt"] = data["w_gt"][:,:L]
 
         data = { **data, **self.pointnet_binseg(x) }
 
