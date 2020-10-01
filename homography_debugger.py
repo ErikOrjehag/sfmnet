@@ -41,8 +41,11 @@ class HomographyDebugger(DebuggerPointBase):
 
             src_pts = np.float32(ap).reshape(-1,1,2)
             dst_pts = np.float32(bp).reshape(-1,1,2)
-            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 2.0)
+            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 3.0)
             mask = mask.flatten().astype(np.bool)
+            n_cv2_inliers = mask.sum()
+            n_cv2_total = mask.shape[0]
+            print(f"cv2 inliers/outliers/total: ${n_cv2_inliers}/${n_cv2_total-n_cv2_inliers}/${n_cv2_total} -> ${100.0*(n_cv2_inliers/n_cv2_total)}%")
             self.img_matches.append(viz.draw_text("CV2 find homo", viz.draw_matches(self.img, self.warp, ap, bp, mask)))
 
             img_warped = cv2.warpPerspective(self.img, M, (self.img.shape[1], self.img.shape[0]))

@@ -134,8 +134,12 @@
                 "homo-debug",
                 "--workers",
                 "1",
-                "--load",
-                "checkpoints/homo_all_s_3/epoch_1.pt",
+                //"--load",
+                //"checkpoints/homo_all_s_3/epoch_1.pt",
+                "--load-point",
+                "checkpoints/point_kitti_a1_m/epoch_30.pt",
+                "--load-consensus",
+                "checkpoints/homo_a1_m/epoch_2.pt",
                 "--dataset",
                 "kitti_homo_adapt"
             ]
@@ -171,9 +175,7 @@
                 "--dataset",
                 "kitti_homo_adapt",
                 "--load-point",
-                "checkpoints/point_kitti/epoch_30.pt",
-                "--load-consensus",
-                "checkpoints/homo_synth_46/epoch_46.pt",
+                "checkpoints/point_kitti_a1_m/epoch_30.pt"
             ]
         },
     ]

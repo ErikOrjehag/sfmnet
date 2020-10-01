@@ -149,10 +149,10 @@ class HomographyConsensus(nn.Module):
     def forward(self, data):
         data = { **data, **self.siamese_unsuperpoint(*self.get_image_pairs(data)) }
         
-        AP = data["A"]["P"] # [B,2,N]
-        AF = data["A"]["F"] # [B,256,N]
-        BP = data["B"]["P"]
-        BF = data["B"]["F"]
+        AP = data["A"]["Pmax"] # [B,2,N]
+        AF = data["A"]["Fmax"] # [B,256,N]
+        BP = data["B"]["Pmax"]
+        BF = data["B"]["Fmax"]
         B,_,N = AP.shape
 
         ids, mask = brute_force_match(AF, BF) # [B,N], [B,N]
@@ -165,7 +165,9 @@ class HomographyConsensus(nn.Module):
 
         L = torch.min(mask.sum(dim=1))
 
+        # TODO: Instead of randperm I should take top L scores instead to get more inliers
         x = torch.stack([ torch.cat([Ap[b], Bp[b]], dim=0)[:,torch.randperm(Ap[b].shape[1],device=Ap[b].device)][:,:L] for b in range(B) ], dim=0)
+        #x = torch.stack([ torch.cat([Ap[b], Bp[b]], dim=0)[:,:L] for b in range(B) ], dim=0)
         
         H = 128
         W = 416

@@ -22,14 +22,20 @@ def multiply_coords(matrix, coords):
     res = res.reshape(B, -1, H, W)
     return res
      
-def to_sampling_grid(coords):
-    B, C, H, W = coords.shape
+def to_sampling_grid(coords, HW=None):
+    # HW argument is used when the dimensions of coords,
+    # can not be used to infer the with and height
+    B, C, HH, WW = coords.shape
+    if HW is None:
+        H, W = HH, WW
+    else:
+        H, W = HW
     # -1 extreme left, +1 extreme right
-    flat = coords.reshape(B, C, -1) # [B,2,H*W]
+    flat = coords.reshape(B, C, -1) # [B,2,HH*WW]
     X = 2*flat[:, 0] / (W-1) - 1
     Y = 2*flat[:, 1] / (H-1) - 1
     p = torch.stack((X, Y), dim=2)
-    return p.reshape(B, H, W, 2)
+    return p.reshape(B, HH, WW, 2)
 
 def pad_zero_column_right(K):
     return F.pad(input=K, pad=(0, 1), mode="constant", value=0)

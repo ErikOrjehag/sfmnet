@@ -16,8 +16,8 @@ class HomographyTrainer(BaseTrainer):
 
     #def get_parameter_groups(self):
     #    return [
-    #        { 'params': self.model.siamese_unsuperpoint.parameters() },
-    #    #    { 'params': self.model.pointnet_binseg.parameters() },
+    #        #{ 'params': self.model.siamese_unsuperpoint.parameters() },
+    #        { 'params': self.model.pointnet_binseg.parameters() },
     #    ]
 
     
@@ -31,7 +31,6 @@ class HomographyTrainer(BaseTrainer):
             exit()
 
         if args.load_consensus:
-            # Only update pointnet_binseg
             model_dict = self.model.state_dict()
             consensus_checkpoint = torch.load(args.load_consensus, map_location=torch.device(args.device))
             model_dict.update(consensus_checkpoint["model"])

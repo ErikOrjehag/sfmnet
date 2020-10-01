@@ -1,10 +1,16 @@
 # sfmnet
 
+python main.py homo-train --log-interval 10 --lr 0.0001 --name homo_a1_m --dataset kitti_homo_adapt --batch 128 --epochs 300 --load-point checkpoints/point_kitti_a1_m/epoch_30
 
 ## Train
 python main.py point-train --log-interval 100 --lr 0.001 --name pointuni2
 python main.py point-train --log-interval 100 --lr 0.0001 --dataset cocokittylyft_homo_adapt --name point_all2
-python main.py point-train --log-interval 100 --lr 0.0001 --dataset kitti_homo_adapt --name point_kitti
+
+python main.py point-train --log-interval 100 --lr 0.0001 --dataset kitti_homo_adapt --name point_kitti_a1
+python main.py point-train --log-interval 100 --lr 0.0001 --dataset kitti_homo_adapt --name point_kitti_a1_m --epochs 100 --load checkpoints/point_kitti_a1/epoch_30.pt
+python main.py point-train --log-interval 100 --lr 0.005 --dataset kitti_homo_adapt --name point_kitti_a2
+python main.py point-train --log-interval 100 --lr 0.00005 --dataset kitti_homo_adapt --name point_kitti_a3
+python main.py point-train --log-interval 100 --lr 0.0002 --dataset kitti_homo_adapt --name point_kitti_a4 --epochs 100
 
 python main.py fcons-train --log-interval 500 --lr 0.0005 --name fc29 --load-point checkpoints/pointuni2/epoch_30.pt
 python main.py fcons-train --log-interval 500 --lr 0.0001 --name fc30 --load-point checkpoints/pointuni2/epoch_30.pt
@@ -16,6 +22,8 @@ python main.py fcons-debug --load checkpoints/fc29/epoch_1.pt
 ## Homo that works
 python main.py homo-synth-train --log-interval 10 --lr 0.0001 --name homo_synth_36 --dataset synth_homo_points --batch 128 --epochs 300
 python main.py homo-synth-train --log-interval 10 --lr 0.0001 --name homo_synth_46 --dataset synth_homo_points --batch 128 --epochs 300
+
+
 
 ## Training data junk
 

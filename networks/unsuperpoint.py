@@ -11,6 +11,8 @@ from geometry import from_homog_coords, to_homog_coords
 
 from homo_adap_dataset import HomoAdapDataset
 
+import reconstruction
+
 def conv(in_channels, out_channels):
     # Create conv2d layer
     return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1)
@@ -123,16 +125,20 @@ class UnsuperPoint(nn.Module):
         features = self.backbone(image)
         S = self.score_decoder(features)
         Prel = self.position_decoder(features)
-        F = self.descriptor_decoder(features)
+        F = self.descriptor_decoder(features) # [B, C, H/8, W/8]
         
         # Relative to absolute pixel coordinates
-        P = rel_to_abs(Prel)
+        P = rel_to_abs(Prel) # [B, 2, H/2, W/2]
+
+        # Interpolate feature descriptors
+        sampling_grid = reconstruction.to_sampling_grid(P, HW=(H,W)) # [B, H/2, W/2, 2] -1 to 1
+        F_interpolated = nn.functional.grid_sample(F, sampling_grid, padding_mode="border", align_corners=True)
         
         # Flatten
         Sflat = S.view(B, -1)
         Pflat = P.view(B, 2, -1)
         Prelflat = Prel.view(B, 2, -1)
-        Fflat = F.view(B, 256, -1)
+        Fflat = F_interpolated.view(B, 256, -1)
 
         # Get data with top N score (S)
         Smax, ids = torch.topk(Sflat, k=self.N, dim=1, largest=True, sorted=False)
@@ -141,17 +147,20 @@ class UnsuperPoint(nn.Module):
         Fmax = torch.stack([Fflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
 
         outputs = {
-            "S": Smax,
-            "P": Pmax,
+            "S": Sflat,
+            "P": Pflat,
+            "F": Fflat,
             "Prel": Prelflat,
-            "F": Fmax,
+            "Smax": Smax,
+            "Pmax": Pmax,
+            "Fmax": Fmax,
         }
 
         return outputs
 
 class SiameseUnsuperPoint(nn.Module):
 
-    def __init__(self, N=400):
+    def __init__(self, N=200):
         super().__init__()
         self.unsuperpoint = UnsuperPoint(N=N)
 
@@ -237,11 +246,11 @@ class UnsuperLoss():
         BS_ = BS.view(-1)[mask_]
 
         # Scores of corresonding points should be similar to each other
-        l_score = (AS_ - BS_) ** 2
+        l_score_sim = (AS_ - BS_) ** 2
 
         # Increase score if they are near, supress score if they are far
         S_ = (AS_ + BS_) / 2
-        l_usp = S_ * (d - dmean)
+        l_score_usp = S_ * (d - dmean)
 
         # Descriptor
         C = D.le(8)
@@ -267,12 +276,15 @@ class UnsuperLoss():
         l_uni_by = uniform_distribution_loss(BPrel[:,1,:])
 
         # Loss terms
-        loss_usp = 1 * l_position.sum() + 2 * l_score.sum() + l_usp.sum()
-        loss_desc = l_desc.sum()
-        loss_decorr = l_decorr.sum()
-        loss_uni_xy = l_uni_ax.sum() + l_uni_ay.sum() + l_uni_bx.sum() + l_uni_by.sum()
+        loss_position  =         l_position.sum()
+        loss_score_sim = 2.0   * l_score_sim.sum()
+        loss_score_usp =         l_score_usp.sum()
+        loss_desc      = 0.001 * l_desc.sum()
+        loss_decorr    = 0.03  * l_decorr.sum()
+        loss_uni_xy    = 100.0 * l_uni_ax.sum() + l_uni_ay.sum() + l_uni_bx.sum() + l_uni_by.sum()
 
-        loss = 1 * loss_usp + 0.001 * loss_desc + 0.03 * loss_decorr + 100 * loss_uni_xy
+        #loss = 1 * loss_usp + 0.001 * loss_desc + 0.03 * loss_decorr + 100 * loss_uni_xy
+        loss = loss_position + loss_score_sim + loss_score_usp + loss_desc + loss_decorr + loss_uni_xy
 
         return loss, { "ids": ids, "mask": mask, "APh": APh }
 
