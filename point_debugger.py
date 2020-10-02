@@ -22,15 +22,14 @@ class DebuggerBase():
             checkpoint = torch.load(args.load, map_location=torch.device(args.device))
             self.model.load_state_dict(checkpoint["model"])
         else:
-            if args.load_point:
-                point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
-                self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
             if args.load_consensus:
-                # Only update pointnet_binseg
                 model_dict = self.model.state_dict()
                 consensus_checkpoint = torch.load(args.load_consensus, map_location=torch.device(args.device))
                 model_dict.update(consensus_checkpoint["model"])
                 self.model.load_state_dict(model_dict)
+            if args.load_point:
+                point_checkpoint = torch.load(args.load_point, map_location=torch.device(args.device))
+                self.model.siamese_unsuperpoint.load_state_dict(point_checkpoint["model"])
 
 
     def _setup_model_and_loss(self):
@@ -156,8 +155,8 @@ class DebuggerPointBase(DebuggerBase):
             self.img = viz.tensor2img(data["img"][self.b])
             self.warp = viz.tensor2img(data["warp"][self.b])
 
-            self.AF = data["A"]["F"]
-            self.BF = data["B"]["F"]
+            self.AF = data["A"]["Fmax"]
+            self.BF = data["B"]["Fmax"]
             self.B = self.BF.shape[0]
             self.des1 = utils.torch_to_numpy(self.AF[self.b].transpose(0,1))
             self.des2 = utils.torch_to_numpy(self.BF[self.b].transpose(0,1))
@@ -165,8 +164,11 @@ class DebuggerPointBase(DebuggerBase):
             self.s1 = utils.torch_to_numpy(data["A"]["S"][self.b])
             self.s2 = utils.torch_to_numpy(data["B"]["S"][self.b])
 
-            self.p1 = utils.torch_to_numpy(data["A"]["P"][self.b].transpose(0,1))
-            self.p2 = utils.torch_to_numpy(data["B"]["P"][self.b].transpose(0,1))
+            self.p1 = utils.torch_to_numpy(data["A"]["Pmax"][self.b].transpose(0,1))
+            self.p2 = utils.torch_to_numpy(data["B"]["Pmax"][self.b].transpose(0,1))
+
+            self.p1_all = utils.torch_to_numpy(data["A"]["P"][self.b].transpose(0,1))
+            self.p2_all = utils.torch_to_numpy(data["B"]["P"][self.b].transpose(0,1))
 
             self.img_matches = []
             self.inliers = []
@@ -207,7 +209,8 @@ class DebuggerPointBase(DebuggerBase):
                 cv2.imshow("matches", self.img_matches)
 
                 #plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
-                plt.hist(self.inliers, 10, (0.,1.), color=(0,0,1))
+                #plt.hist(self.inliers, 10, (0.,1.), color=(0,0,1))
+                plt.hist(self.s1, 100, (0.,1.), color=(0,0,1))
                 
                 fig.canvas.flush_events()
 
@@ -239,7 +242,7 @@ class PointDebugger(DebuggerPointBase):
             mask = utils.torch_to_numpy(data["mask"][self.b])
             APh = utils.torch_to_numpy(data["APh"][self.b])
             p1h = utils.torch_to_numpy(data["APh"][self.b].transpose(0,1))
-            self.img_matches.append(viz.draw_text("Matched ids", viz.draw_matches(self.img, self.warp, self.p1[ids][mask], self.p2[mask])))
+            self.img_matches.append(viz.draw_text("Matched ids", viz.draw_matches(self.img, self.warp, self.p1_all[ids][mask], self.p2_all[mask])))
             #self.img_matches.append(viz.draw_matches(img, warp, p1, p1h))
 
 class SynthHomoPointDebugger(DebuggerBase):

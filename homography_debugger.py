@@ -27,6 +27,8 @@ class HomographyDebugger(DebuggerPointBase):
             ap, bp = x[:,:2], x[:,2:]
             H = 128
             W = 416
+            ap *= W
+            bp *= W
             ap[:,0] += W/2
             ap[:,1] += H/2
             bp[:,0] += W/2
@@ -52,9 +54,15 @@ class HomographyDebugger(DebuggerPointBase):
             ap_warped = cv2.perspectiveTransform(src_pts, M).squeeze(1)
             self.img_matches.append(viz.draw_text("CV2 warp", viz.draw_matches(img_warped, self.warp, ap_warped, bp, mask, draw_outliers=False)))
 
-            H_pred = data["H_pred"][self.b].inverse()
+            T = np.array([
+                [W, 0, W/2.0],
+                [0, W, H/2.0],
+                [0, 0, 1.0],
+            ])
+
+            H_pred = utils.torch_to_numpy(data["H_pred"][self.b].inverse())
+            H_pred = T @ H_pred @ np.linalg.inv(T)
             H = H_pred / H_pred[2,2]
-            H = utils.torch_to_numpy(H)
 
             img_H_warped = cv2.warpPerspective(self.img, H, (self.img.shape[1], self.img.shape[0]))
             ap_H_warped = cv2.perspectiveTransform(src_pts, H).squeeze(1)

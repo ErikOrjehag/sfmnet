@@ -175,11 +175,13 @@ class HomographyConsensus(nn.Module):
         x[:,1,:] -= H/2
         x[:,2,:] -= W/2
         x[:,3,:] -= H/2
+        x /= W
+        #x /= 10.0
 
-        xx = utils.torch_to_numpy(x)
-        xxx = torch.tensor(xx).to(x.device)
+        #xx = utils.torch_to_numpy(x)
+        #xxx = torch.tensor(xx).to(x.device)
 
-        data = { **data, **self.pointnet_binseg(xxx) }
+        data = { **data, **self.pointnet_binseg(x) }
 
         """
         X = [torch.cat([Ap[b], Bp[b]], dim=0).unsqueeze(0) for b in range(B)] # [[1,K=4,n] * B]
@@ -242,6 +244,7 @@ class ConsensusLoss():
             data["P"] = P
         
         # Inlier loss
+        #lam_inliers = 0.001
         lam_inliers = 0.001
         #inlier_loss = -lam_inliers * inlier_ratio_soft.mean()
         inlier_loss = -lam_inliers * inlier_prob.mean()
@@ -256,8 +259,8 @@ class ConsensusLoss():
         I = torch.eye(Temb.shape[1],dtype=torch.double,device=Temb.device)
         reg_loss = lam_reg * ((Temb @ Temb.transpose(1,2) - I)**2).mean()
 
-        #total_loss = inlier_loss + vander_loss + reg_loss + lam_inliers
-        total_loss = inlier_loss + vander_loss + lam_inliers
+        total_loss = inlier_loss + vander_loss + reg_loss + lam_inliers
+        #total_loss = inlier_loss + vander_loss + lam_inliers
 
         #print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), reg_loss.item(), N)
         print(inlier_prob.mean().item(), inlier_loss.item(), vander_loss.item(), N)

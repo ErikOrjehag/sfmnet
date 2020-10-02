@@ -140,8 +140,11 @@ class UnsuperPoint(nn.Module):
         Prelflat = Prel.view(B, 2, -1)
         Fflat = F_interpolated.view(B, 256, -1)
 
+        N_good_score = torch.min((Sflat > 0.2).sum(dim=1))
+        #print("N_good_score", N_good_score)
+
         # Get data with top N score (S)
-        Smax, ids = torch.topk(Sflat, k=self.N, dim=1, largest=True, sorted=False)
+        Smax, ids = torch.topk(Sflat, k=450, dim=1, largest=True, sorted=False)
         Pmax = torch.stack([Pflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
         #Prelmax = torch.stack([Prelflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
         Fmax = torch.stack([Fflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
@@ -160,7 +163,7 @@ class UnsuperPoint(nn.Module):
 
 class SiameseUnsuperPoint(nn.Module):
 
-    def __init__(self, N=200):
+    def __init__(self, N=300):
         super().__init__()
         self.unsuperpoint = UnsuperPoint(N=N)
 
@@ -178,7 +181,7 @@ class SiameseUnsuperPoint(nn.Module):
 
 class SequenceUnsuperPoint(nn.Module):
 
-    def __init__(self, N=200):
+    def __init__(self, N=300):
         super().__init__()
         self.unsuperpoint = UnsuperPoint(N=N)
 
