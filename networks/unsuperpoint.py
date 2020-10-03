@@ -167,10 +167,20 @@ class SiameseUnsuperPoint(nn.Module):
         super().__init__()
         self.unsuperpoint = UnsuperPoint(N=N)
 
-    def forward(self, imgA, imgB=None):
-        if imgB is None:
-            imgB = imgA["warp"]
-            imgA = imgA["img"]
+    def forward(self, data):
+        if "img" in data and "warp" in data:
+            imgA = data["img"]
+            imgB = data["warp"]
+        elif "tgt" in data and "refs" in data:
+            imgA = data["tgt"]
+            imgB = data["refs"][:,1]
+            data["img"] = imgA
+            data["warp"] = imgB
+            print(imgA.shape)
+            print(imgB.shape)
+        else:
+            print("INVALID INPUT DATA")
+            exit()
         A = self.unsuperpoint(imgA)
         B = self.unsuperpoint(imgB)
         outputs = {

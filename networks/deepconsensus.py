@@ -143,11 +143,8 @@ class HomographyConsensus(nn.Module):
             for param in self.siamese_unsuperpoint.parameters():
                 param.requires_grad = False
     
-    def get_image_pairs(self, data):
-        return (data["img"], data["warp"])
-
     def forward(self, data):
-        data = { **data, **self.siamese_unsuperpoint(*self.get_image_pairs(data)) }
+        data = { **data, **self.siamese_unsuperpoint(data) }
         
         AP = data["A"]["Pmax"] # [B,2,N]
         AF = data["A"]["Fmax"] # [B,256,N]

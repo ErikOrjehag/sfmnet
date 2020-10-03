@@ -5,7 +5,7 @@ import utils
 import viz
 import numpy as np
 import cv2
-from networks.unsuperpoint import SiameseUnsuperPoint, UnsuperLoss, brute_force_match
+from networks.unsuperpoint import SiameseUnsuperPoint, UnsuperLoss, brute_force_match, SequenceUnsuperPoint
 from matplotlib import pyplot as plt
 from networks.deepconsensus import HomographyConsensusSynthPoints, HomographyConsensusSynthPointsLoss, HomographyConsensusLoss
 
@@ -224,7 +224,8 @@ class PointDebugger(DebuggerPointBase):
     def _setup_model_and_loss(self):
         return (
             SiameseUnsuperPoint().to(self.DEVICE), 
-            UnsuperLoss() 
+            #UnsuperLoss() 
+            lambda x: (torch.rand(1), x),
         )
 
     def _compute_debug(self, loss, data):
@@ -237,7 +238,7 @@ class PointDebugger(DebuggerPointBase):
             self.img_matches.append(viz.draw_text("PyTorch Matcher", viz.draw_matches(self.img, self.warp, self.p1[mask], self.p2[ids][mask])))
             print(ids.shape, mask.sum())
 
-        if True: # debug match using ids
+        if False: # debug match using ids
             ids = utils.torch_to_numpy(data["ids"][self.b])
             mask = utils.torch_to_numpy(data["mask"][self.b])
             APh = utils.torch_to_numpy(data["APh"][self.b])
