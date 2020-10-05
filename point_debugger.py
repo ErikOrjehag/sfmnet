@@ -208,9 +208,9 @@ class DebuggerPointBase(DebuggerBase):
                 
                 cv2.imshow("matches", self.img_matches)
 
-                #plt.hist(self.prelflat, 200, (0.,1.), color=(0,0,1))
+                plt.hist(self.prelflat, 20, (0.,1.), color=(0,0,1))
                 #plt.hist(self.inliers, 10, (0.,1.), color=(0,0,1))
-                plt.hist(self.s1, 100, (0.,1.), color=(0,0,1))
+                #plt.hist(self.s1, 100, (0.,1.), color=(0,0,1))
                 
                 fig.canvas.flush_events()
 

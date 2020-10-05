@@ -18,11 +18,16 @@ python main.py point-train --log-interval 100 --lr 0.005 --dataset kitti_homo_ad
 python main.py point-train --log-interval 100 --lr 0.00005 --dataset kitti_homo_adapt --name point_kitti_a3
 python main.py point-train --log-interval 100 --lr 0.0002 --dataset kitti_homo_adapt --name point_kitti_a4 --epochs 100
 
-devide by W:
+### devide by W:
 python main.py homo-train --log-interval 10 --lr 0.00001 --name homo_a1_m_450_7 --dataset kitti_homo_adapt --batch 32 --epochs 300 --load-point checkpoints/point_kitti_a1_m/epoch_30.pt
 
-devide by W and reg:
+### devide by W and reg:
 python main.py homo-train --log-interval 10 --lr 0.00001 --name homo_a1_m_450_9 --dataset kitti_homo_adapt --batch 32 --epochs 300 --load-point checkpoints/point_kitti_a1_m/epoch_30.pt
+
+### point train that works pretty good
+python main.py point-train --log-interval 100 --lr 0.00003 --dataset kitti_homo_adapt --epochs 300 --name point_kitti_m6
+
+
 
 python main.py fcons-train --log-interval 500 --lr 0.0005 --name fc29 --load-point checkpoints/pointuni2/epoch_30.pt
 python main.py fcons-train --log-interval 500 --lr 0.0001 --name fc30 --load-point checkpoints/pointuni2/epoch_30.pt

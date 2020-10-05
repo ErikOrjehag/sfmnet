@@ -44,7 +44,7 @@ def draw_matches(img1, img2, pts1, pts2, inliers=None, draw_outliers=True):
   def _draw_match(img, p1, p2, c, w=1):
     p1 = tuple(p1)
     p2 = tuple(p2)
-    img = cv2.line(img, p1, p2, c, w)
+    #img = cv2.line(img, p1, p2, c, w)
     img = cv2.circle(img, p1, 4, c, w)
     img = cv2.circle(img, p2, 4, c, w)
     return img
