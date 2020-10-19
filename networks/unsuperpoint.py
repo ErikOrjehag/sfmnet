@@ -144,7 +144,7 @@ class UnsuperPoint(nn.Module):
         #print("N_good_score", N_good_score)
 
         # Get data with top N score (S) 450
-        Smax, ids = torch.topk(Sflat, k=300, dim=1, largest=True, sorted=False)
+        Smax, ids = torch.topk(Sflat, k=350, dim=1, largest=True, sorted=False)
         Pmax = torch.stack([Pflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
         #Prelmax = torch.stack([Prelflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
         Fmax = torch.stack([Fflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
@@ -289,12 +289,12 @@ class UnsuperLoss():
         l_uni_by = uniform_distribution_loss(BPrel[:,1,:])
 
         # Loss terms
-        loss_position  = 1   * l_position.mean()
-        loss_score_sim = 1 * l_score_sim.mean()
-        loss_score_usp = 1  * l_score_usp.mean()
-        loss_desc      = 1   * l_desc.mean()
-        loss_decorr    = 1  * l_decorr.mean()
-        loss_uni_xy    = 1  * (l_uni_ax.mean() + l_uni_ay.mean() + l_uni_bx.mean() + l_uni_by.mean())
+        loss_position  = 1.0   * l_position.mean()
+        loss_score_sim = 10.0  * l_score_sim.mean()
+        loss_score_usp = 1.0   * l_score_usp.mean()
+        loss_desc      = 1.0   * l_desc.mean()
+        loss_decorr    = 10.0   * l_decorr.mean()
+        loss_uni_xy    = 1000.0 * (l_uni_ax.mean() + l_uni_ay.mean() + l_uni_bx.mean() + l_uni_by.mean())
 
         #loss = 1 * loss_usp + 0.001 * loss_desc + 0.03 * loss_decorr + 100 * loss_uni_xy
         loss = loss_position + loss_score_sim + loss_score_usp + loss_desc + loss_decorr + loss_uni_xy

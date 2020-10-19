@@ -27,6 +27,8 @@ python main.py homo-train --log-interval 10 --lr 0.00001 --name homo_a1_m_450_9 
 ### point train that works pretty good
 python main.py point-train --log-interval 100 --lr 0.00003 --dataset kitti_homo_adapt --epochs 300 --name point_kitti_m6
 
+### point train with more uniform weight
+python main.py point-train --log-interval 100 --lr 0.00005 --dataset kitti_homo_adapt --epochs 300 --name point_kitti_m9
 
 
 python main.py fcons-train --log-interval 500 --lr 0.0005 --name fc29 --load-point checkpoints/pointuni2/epoch_30.pt
