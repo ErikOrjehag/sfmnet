@@ -22,6 +22,7 @@ from sfm_tester import SFMTester
 
 from point_trainer import PointTrainer
 from point_debugger import PointDebugger, DebuggerHomoSynthPoint
+from point_tester import PointTester
 
 from homography_trainer import HomographyTrainer
 from homography_debugger import HomographyDebugger
@@ -43,7 +44,7 @@ def main():
     if choice == "sfm-train":
         action = SFMTrainer(parse_args(["name", "batch", "train", "loss", "dataset"]))
     elif choice == "sfm-debug":
-        action = SFMDebugger(parse_args(["loss", "dataset"]))
+        action = SFMDebugger(parse_args(["train", "loss", "dataset"]))
     elif choice == "sfm-test":
         action = SFMTester(parse_args(["dataset", "loss"], overwrite={"batch": 1}))
 
@@ -52,6 +53,8 @@ def main():
         action = PointTrainer(parse_args(["name", "batch", "train", "dataset"]))
     elif choice == "point-debug":
         action = PointDebugger(parse_args(["loss", "batch", "dataset"]))
+    elif choice == "point-test":
+        action = PointTester(parse_args(["dataset"], overwrite={"batch": 1}))
 
     # Homography consensus
     elif choice == "homo-train":

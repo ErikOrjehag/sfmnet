@@ -22,6 +22,25 @@ def tensor2depthimg(depth):
   #colored = (mapper.to_rgba(depth)[:,:,:3] * 255).astype(np.uint8)
   #return colored
 
+def tensor2flatimg(img):
+  img = img.cpu().detach().numpy()
+  return cv2.applyColorMap(np.uint8(255*img), cv2.COLORMAP_BONE)
+
+def tensor2idximg(img, colors):
+  img = img.cpu().detach().numpy()
+  H, W = img.shape
+  img2 = np.zeros((H,W,3), dtype=np.uint8)
+  for i, color in enumerate(colors):
+    img2[img==i] = color
+  return img2
+
+def tensor2maskimg(img):
+  img = img.cpu().detach().numpy()
+  H, W = img.shape
+  img2 = np.zeros((H,W), dtype=np.uint8)
+  img2[img==True] = 255
+  return img2
+
 def tensor2img(img):
   img = img.cpu().detach().numpy()
   return np.uint8(np.transpose(img, (1, 2, 0))[:,:,::-1] * 255)
@@ -44,7 +63,7 @@ def draw_matches(img1, img2, pts1, pts2, inliers=None, draw_outliers=True):
   def _draw_match(img, p1, p2, c, w=1):
     p1 = tuple(p1)
     p2 = tuple(p2)
-    #img = cv2.line(img, p1, p2, c, w)
+    img = cv2.line(img, p1, p2, c, w)
     img = cv2.circle(img, p1, 4, c, w)
     img = cv2.circle(img, p2, 4, c, w)
     return img

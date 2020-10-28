@@ -62,13 +62,19 @@ def uniform_distribution_loss(values, a=0., b=1.):
     s = ( (v-a) / (b-a) - (i-1) / (L-1) )**2
     return s
 
-def brute_force_match(AF, BF):
+def brute_force_match(AF, BF, normType='NORM_L2'):
     # Brute force match descriptor vectors [B,256,N]
     af = AF.permute(0,2,1).unsqueeze(2) # [B,N,256]
     bf = BF.permute(0,2,1).unsqueeze(1)
-    l2 = (af - bf).norm(dim=-1) # [B,N,N]
-    Aids = torch.argmin(l2, dim=1) # [B,N]
-    Bids = torch.argmin(l2, dim=2) # [B,N]
+    if normType == 'NORM_L2':
+        l = (af - bf).norm(dim=-1) # [B,N,N]
+    elif normType == 'NORM_HAMMING':
+        l = (af != bf).sum(dim=-1)
+    else:
+        print(f'normType not supported: {normType}')
+        exit()
+    Aids = torch.argmin(l, dim=1) # [B,N]
+    Bids = torch.argmin(l, dim=2) # [B,N]
     B, N = Bids.shape
     #offset = (torch.arange(0,B)*N).to(AF.device).repeat_interleave(N)
     #match = Aids.flatten()[offset+Bids.flatten()].reshape(B,N) # [B,N]
@@ -143,7 +149,7 @@ class UnsuperPoint(nn.Module):
         N_good_score = torch.min((Sflat > 0.2).sum(dim=1))
         #print("N_good_score", N_good_score)
 
-        # Get data with top N score (S) 450
+        # Get data with top N score (S) 450, 350
         Smax, ids = torch.topk(Sflat, k=350, dim=1, largest=True, sorted=False)
         Pmax = torch.stack([Pflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)
         #Prelmax = torch.stack([Prelflat[i,:,ids[i]] for i in range(ids.shape[0])], dim=0)

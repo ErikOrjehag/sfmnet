@@ -40,6 +40,7 @@ class HomographyDebugger(DebuggerPointBase):
             print(w.shape)
             inliers = (w > 0.5)
             self.img_matches.append(viz.draw_text("inliers fcons", viz.draw_matches(self.img, self.warp, ap, bp, inliers)))
+            #self.img_matches.append(np.concatenate((self.img, self.warp), axis=1))
 
             src_pts = np.float32(ap).reshape(-1,1,2)
             dst_pts = np.float32(bp).reshape(-1,1,2)

@@ -235,7 +235,8 @@ class PointDebugger(DebuggerPointBase):
             ids = utils.torch_to_numpy(ids[self.b])
             mask = utils.torch_to_numpy(mask[self.b])
             print(self.p1[mask].shape)
-            self.img_matches.append(viz.draw_text("PyTorch Matcher", viz.draw_matches(self.img, self.warp, self.p1[mask], self.p2[ids][mask])))
+            #self.img_matches.append(viz.draw_text("PyTorch Matcher", viz.draw_matches(self.img, self.warp, self.p1[mask], self.p2[ids][mask])))
+            self.img_matches.append(viz.draw_matches(self.img, self.warp, self.p1[mask], self.p2[ids][mask]))
             print(ids.shape, mask.sum())
 
         if False: # debug match using ids

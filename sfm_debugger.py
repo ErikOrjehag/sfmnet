@@ -56,6 +56,13 @@ class SFMDebugger():
 
         print(f"loss {loss.item():.3f}")
         
+        #edge_exp_x = viz.tensor2flatimg(data["edge_exp_x"][0].squeeze(0).squeeze(0))
+        #edge_exp_y = viz.tensor2flatimg(data["edge_exp_y"][0].squeeze(0).squeeze(0))
+        #diff = viz.tensor2flatimg(data["diff"][0].squeeze(0))
+        #min_idx = viz.tensor2idximg(data["min_idx"][0].squeeze(0), colors=[(255,0,0), (0,255,0)])
+        #stationary_mask = viz.tensor2maskimg(data["stationary_mask"][0].squeeze(0))
+        exp_mask = viz.tensor2maskimg(data["exp_mask"][0][0,0])
+
         for i in range(data["pose"].shape[1]):
             pose = list(data["pose"][0,i,:].cpu().detach().numpy())
             #print("pose %d -> x: %.6f, y: %.6f, z: %.6f, rx: %.6f, ry: %.6f, rz: %.6f" % (i, *pose))
@@ -71,7 +78,6 @@ class SFMDebugger():
         T1_gt = np.identity(4)
         T1_gt[:3, 3] = 0
         T2_gt = T_gt[1]
-
 
         Ta, Tb, Tc = T0.copy(), T1.copy(), T2.copy()
         Ta_gt, Tb_gt, Tc_gt = T0_gt.copy(), T1_gt.copy(), T2_gt.copy()
@@ -119,6 +125,12 @@ class SFMDebugger():
             
             cv2.imshow("target and depth", img)
             cv2.imshow("target and refs", tgtrefs)
+            #cv2.imshow("edge_exp_x", edge_exp_x)
+            #cv2.imshow("edge_exp_y", edge_exp_y)
+            #cv2.imshow("diff", diff)
+            #cv2.imshow("min_idx", min_idx)
+            #cv2.imshow("stationary_mask", stationary_mask)
+            cv2.imshow("exp_mask", exp_mask)
 
             self.renderer.clear_screen()
             self.renderer.draw_points(points, colors)

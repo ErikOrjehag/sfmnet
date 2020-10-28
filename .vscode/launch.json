@@ -78,17 +78,26 @@
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
-            "subProcess": true,
-            "args": [
+            "subProcess": true, // python main.py sfm-train --dataset kitti --net sfmlearner --name sfmlearner-orig-depth
+            "args": [ // python main.py sfm-debug --dataset kitti --net sfmlearner --load checkpoints/sfmlearner-edge-norm-stat-ssim-min/epoch_30.pt --ssim-weight 0.85 --smooth-map-normalization --edge-aware --stationary-mask --min-loss --explain-weight 0.0
                 "sfm-debug",
                 "--workers",
                 "1",
                 "--dataset",
                 "kitti",
                 "--net",
-                "monodepth2",
+                "sfmlearner",
                 "--load",
-                "checkpoints/mono/epoch_5.pt"
+                "checkpoints/sfmlearner-orig-depth/epoch_30.pt",
+                /*"checkpoints/sfmlearner-edge-norm-stat-ssim-min/epoch_30.pt",
+                "--ssim-weight",
+                "0.85",
+                "--smooth-map-normalization",
+                "--edge-aware",
+                "--stationary-mask",
+                "--min-loss",
+                "--explain-weight",
+                "0.0"*/
             ]
         },
         {
@@ -121,6 +130,23 @@
                 "checkpoints/pointuni2/epoch_30.pt",
                 "--device",
                 "cpu"
+            ]
+        },
+        {
+            "name": "Test point",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "args": [
+                "point-test",
+                "--workers",
+                "1",
+                "--load",
+                "checkpoints/point_kitti_m6/epoch_25.pt",
+                "--dataset",
+                "kitti_homo_adapt",
             ]
         },
         {

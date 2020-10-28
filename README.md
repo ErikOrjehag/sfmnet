@@ -1,3 +1,11 @@
+
+pytorch-ignite       0.2.1     
+torch                1.3.1     
+torchvision          0.4.2
+
+pytorch-ignite       0.2.1     
+torch                1.6.0     
+torchvision          0.7.0
 # sfmnet
 
 python main.py homo-train --log-interval 10 --lr 0.0001 --name homo_a1_m --dataset kitti_homo_adapt --batch 128 --epochs 300 --load-point checkpoints/point_kitti_a1_m/epoch_30
@@ -45,7 +53,12 @@ python main.py homo-synth-debug --load-consensus checkpoints/homo_synth_49/epoch
 python main.py homo-synth-train --log-interval 10 --lr 0.0001 --name homo_synth_36 --dataset synth_homo_points --batch 128 --epochs 300
 python main.py homo-synth-train --log-interval 10 --lr 0.0001 --name homo_synth_46 --dataset synth_homo_points --batch 128 --epochs 300
 
-
+## Test point
+python main.py point-test --load checkpoints/point_kitti_m10/epoch_30.pt --dataset kitti_homo_adapt
+unsup_RS -> mean: 0.796, std: 0.051
+unsup_LE -> mean: 0.667, std: 0.081
+orb_RS -> mean: 0.844, std: 0.073
+orb_LE -> mean: 0.762, std: 0.072
 
 ## Training data junk
 

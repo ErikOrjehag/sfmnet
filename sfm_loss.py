@@ -66,7 +66,8 @@ class SFMLoss():
         if self.use_normalization:
             smooth_map = [utils.normalize_map(m) for m in smooth_map]
         if self.use_edge_aware:
-            smooth_loss = edge_aware_smooth_loss(smooth_map, data["tgt"])
+            smooth_loss, edge_debug = edge_aware_smooth_loss(smooth_map, data["tgt"])
+            debug = {**debug, **edge_debug}
         else:
             smooth_loss = second_order_smooth_loss(smooth_map)
         total_loss += self.weights["smooth"] * smooth_loss
@@ -179,6 +180,7 @@ def one_scale_photometric_loss(
     else:
         combined = reconstruction_similarities
 
+    #combined2 = torch.where(combined == 0, torch.ones_like(combined)*1e9, combined)
     min_similarities, min_idx = torch.min(combined, dim=1)
     n_stationary_similarities = stationary_similarities.shape[1] if use_stationary_mask else 0
     not_stationary_mask = (min_idx > n_stationary_similarities - 1)
@@ -189,7 +191,7 @@ def one_scale_photometric_loss(
 
     warps = torch.stack(warps, dim=1)
 
-    return total_loss, { "warp": warps, "diff": diff, "min_idx": min_idx }
+    return total_loss, { "warp": warps, "diff": diff, "min_idx": min_idx, "stationary_mask": ~not_stationary_mask }
 
 
 def photometric_similarity_map(img1, img2, ssim_weight):
@@ -239,6 +241,10 @@ def second_order_smooth_loss(depths):
 
 def edge_aware_smooth_loss(depths, tgt):
     loss = 0.0
+    debug = { 
+        "edge_exp_x": [],
+        "edge_exp_y": [],
+    }
     for scale, depth in enumerate(depths):
         H, W = depth.shape[2:]
         ratio = tgt.shape[2] / H
@@ -247,10 +253,14 @@ def edge_aware_smooth_loss(depths, tgt):
         grad_depth_y = torch.abs(depth[:, :, :-1, :] - depth[:, :, 1:, :])
         grad_img_x = torch.mean(torch.abs(img[:, :, :, :-1] - img[:, :, :, 1:]), 1, keepdim=True)
         grad_img_y = torch.mean(torch.abs(img[:, :, :-1, :] - img[:, :, 1:, :]), 1, keepdim=True)
-        grad_depth_x *= torch.exp(-grad_img_x*10)
-        grad_depth_y *= torch.exp(-grad_img_y*10)
+        exp_x = torch.exp(-grad_img_x*10)
+        exp_y = torch.exp(-grad_img_y*10)
+        grad_depth_x *= exp_x
+        grad_depth_y *= exp_y
         loss += (grad_depth_x.mean() + grad_depth_y.mean()) / (2 ** scale)
-    return loss
+        debug["edge_exp_x"].append(exp_x)
+        debug["edge_exp_y"].append(exp_y)
+    return loss, debug
 
 def explainability_regularization_loss(masks):
     loss = 0
